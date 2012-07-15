@@ -313,37 +313,8 @@ public class LifeSurfaceView extends SurfaceView
 				
 				drawBackPillarAndShade(canvas, BITMAP_WIDTH + BACK_PILLAR_WIDTH - stageBackPillarShift);
 				
-				/* 
-				 * Draw pillars
-				 */
-				Paint pillarPaint = new Paint();
-				pillarPaint.setAntiAlias(true);
-				for(int i = BITMAP_WIDTH + PILLAR_WIDTH - stagePillarShift; i < stage.getWidth()  - stageBackPillarShift; i += PILLAR_WIDTH){
-					Random rand = new Random();
-					int pillarHeight = (int)((BITMAP_HEIGHT* 0.5 * (PILLAR_HEIGHT_MAX + PILLAR_HEIGHT_MIN)) + 
-							rand.nextGaussian() * 0.3 *
-							(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX - BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
-					pillarPaint.setColor(pillarColor[rand.nextInt(pillarColor.length)]);
-					
-					if( i + PILLAR_WIDTH <= stage.getWidth() - stageBackPillarShift ){
-					canvas.drawCircle(
-							i + PILLAR_WIDTH / 2, 
-							BITMAP_HEIGHT - pillarHeight, 
-							PILLAR_WIDTH / 2, 
-							pillarPaint);
-					canvas.drawRect(
-							i, 
-							BITMAP_HEIGHT - pillarHeight, 
-							i + PILLAR_WIDTH, 
-							BITMAP_HEIGHT, 
-							pillarPaint);
-					
-					}
-					else{
-						stagePillarShift = stage.getWidth() - i;
-					}
-					i += rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE;
-				}
+				drawPillar(canvas, BITMAP_WIDTH + PILLAR_WIDTH - stagePillarShift);
+				
 				
 				/*
 				 * Draw clouds
@@ -563,37 +534,7 @@ public class LifeSurfaceView extends SurfaceView
 		
 		drawBackPillarAndShade(canvas, BACK_PILLAR_WIDTH /2);
 		
-		/*
-		 * Draw pillars
-		 */
-		Paint pillarPaint = new Paint();
-		pillarPaint.setAntiAlias(true);
-		for(int i = 0; i < stage.getWidth() - stageBackPillarShift; i += PILLAR_WIDTH){
-			Random rand = new Random();
-			int pillarHeight = (int) ((BITMAP_HEIGHT* 0.5 * (PILLAR_HEIGHT_MIN + PILLAR_HEIGHT_MAX)) + 
-					rand.nextGaussian() * 0.3 *
-					(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX - BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
-			pillarPaint.setColor(pillarColor[rand.nextInt(pillarColor.length)]);
-			
-			if( i + PILLAR_WIDTH <= stage.getWidth() - stageBackPillarShift ){
-				canvas.drawCircle(
-						i + PILLAR_WIDTH/2, 
-						BITMAP_HEIGHT - pillarHeight, 
-						PILLAR_WIDTH/2, 
-						pillarPaint);
-				canvas.drawRect(
-						i, 
-						BITMAP_HEIGHT - pillarHeight, 
-						i+PILLAR_WIDTH, 
-						BITMAP_HEIGHT, 
-						pillarPaint);
-			}
-			else{
-				stagePillarShift = stage.getWidth() - i;
-			}
-			
-			i += rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE;
-		}
+		drawPillar(canvas, 0);
 		
 		/*
 		 * Draw clouds
@@ -639,6 +580,41 @@ public class LifeSurfaceView extends SurfaceView
 		drawTree(canvas, 0);
 		
 		thread.start();
+	}
+
+	private void drawPillar(Canvas canvas, int start) {
+		/*
+		 * Draw pillars
+		 */
+		Paint pillarPaint = new Paint();
+		pillarPaint.setAntiAlias(true);
+		
+		for(int i = start; i < stage.getWidth() - stageBackPillarShift; i += PILLAR_WIDTH){
+			Random rand = new Random();
+			int pillarHeight = (int) ((BITMAP_HEIGHT* 0.5 * (PILLAR_HEIGHT_MIN + PILLAR_HEIGHT_MAX)) + 
+					rand.nextGaussian() * 0.3 *
+					(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX - BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
+			pillarPaint.setColor(pillarColor[rand.nextInt(pillarColor.length)]);
+			
+			if( i + PILLAR_WIDTH <= stage.getWidth() - stageBackPillarShift ){
+				canvas.drawCircle(
+						i + PILLAR_WIDTH / 2, 
+						BITMAP_HEIGHT - pillarHeight, 
+						PILLAR_WIDTH / 2, 
+						pillarPaint);
+				canvas.drawRect(
+						i, 
+						BITMAP_HEIGHT - pillarHeight, 
+						i+PILLAR_WIDTH, 
+						BITMAP_HEIGHT, 
+						pillarPaint);
+			}
+			else{
+				stagePillarShift = stage.getWidth() - i;
+			}
+			
+			i += rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE;
+		}
 	}
 
 	private void drawBackPillarAndShade(Canvas canvas, int start) {
