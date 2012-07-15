@@ -3,7 +3,6 @@
 
     <string name="hello">Hello World, LifeActivity!</string>
     <string name="app_name">Life</string>
-	<string name="block_side_length">32</string>
 	
 	<string name="brick_height">32</string>
 	<string name="brick_width">32</string>

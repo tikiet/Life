@@ -103,7 +103,6 @@ public class LifeSurfaceView extends SurfaceView
 	private double RANDOM_BRICK_HEIGHT_MIN;
 	private double RANDOM_BRICK_THRESHOLD;
 
-	private int BLOCK_SIDE_LENGTH;
 	private double BRICK_HEIGHT;
 	private double BRICK_WIDTH;
 	private double BRICK_SHADE_HEIGHT_OFFSET;
@@ -158,18 +157,6 @@ public class LifeSurfaceView extends SurfaceView
 		int startx = 0;
 		public void run(){
 			while(true){
-				Drawable yellowTile = context.getResources().getDrawable(R.drawable.tile_yellow);
-				Drawable brownTile = context.getResources().getDrawable(R.drawable.tile_brown);
-				Drawable shadeTile = context.getResources().getDrawable(R.drawable.shade);
-				Drawable heroTile = context.getResources().getDrawable(R.drawable.hero);
-				Drawable heroShadeTile = context.getResources().getDrawable(R.drawable.hero_shade);
-				
-				Bitmap yellowBitmap = ((BitmapDrawable)yellowTile).getBitmap();
-				Bitmap brownBitmap = ((BitmapDrawable)brownTile).getBitmap();
-				Bitmap shadeBitmap = ((BitmapDrawable)shadeTile).getBitmap();
-				Bitmap heroBitmap = ((BitmapDrawable)heroTile).getBitmap();
-				Bitmap heroShadeBitmap = ((BitmapDrawable)heroShadeTile).getBitmap();
-				
 				while(startx <= BITMAP_WIDTH * 2){
 					Log.d("Life", "startx = " + startx);
 					Canvas canvas = new Canvas(stageWithBricks);
@@ -183,75 +170,11 @@ public class LifeSurfaceView extends SurfaceView
 					
 					updateHero();
 					
-					/*
-					 * Draw bricks' shade
-					 */
-					Paint brickShadePaint = new Paint();
-					brickShadePaint.setAlpha(BRICK_SHADE_ALPHA);
-					for(int i = (int)Math.floor(startx / BLOCK_SIDE_LENGTH); 
-							i < (int)Math.ceil((startx + BITMAP_WIDTH)/ BLOCK_SIDE_LENGTH + 2);
-							i++){
-						for(int j = 0; j < blockArray[i].length; j++){
-							if(blockArray[i][j] != Brick.NONE){
-								int x1 = (int) (i * BLOCK_SIDE_LENGTH - BRICK_SHADE_WIDTH_OFFSET);
-								int y1 = (int) (j * BLOCK_SIDE_LENGTH + BRICK_SHADE_HEIGHT_OFFSET);
-								int x2 = x1 + BLOCK_SIDE_LENGTH;
-								int y2 = y1 + BLOCK_SIDE_LENGTH;
-								
-								if(x1 < 0) x1 = 0;
-								if(y1 > BITMAP_HEIGHT) y1 = BITMAP_HEIGHT;
-								if(y2 > BITMAP_HEIGHT) y2 = BITMAP_HEIGHT;
-								
-								RectF rDest = new RectF(x1,y1,x2,y2);
-								
-								canvas.drawBitmap(shadeBitmap, null, rDest, brickShadePaint);
-							}
-						}
-					}
+					drawBrickShade(canvas, startx);
 						
-					/*
-					 * Draw hero's shade
-					 */
-					Paint heroShadePaint = new Paint();
-					heroShadePaint.setAlpha(HERO_SHADE_ALPHA);
-					double sx1 = startx + heroPositionX - (HERO_WIDTH - BLOCK_SIDE_LENGTH)/2 - HERO_SHADE_WIDTH_OFFSET;
-					double sy1 = (BITMAP_HEIGHT - heroPositionY) + BLOCK_SIDE_LENGTH - HERO_HEIGHT + HERO_SHADE_HEIGHT_OFFSET;
-					double sx2 = sx1 + HERO_WIDTH;
-					double sy2 = sy1 + HERO_HEIGHT;
-					RectF hsDest = new RectF((float)sx1, (float)sy1, (float)sx2, (float)sy2);
-					canvas.drawBitmap(heroShadeBitmap, null, hsDest, heroShadePaint);
+					drawHeroShade(canvas, startx);
 					
-					/*
-					 * Draw bricks
-					 */
-					canvas = new Canvas(stageWithBricks);
-					for(int i = (int)Math.floor(startx / BLOCK_SIDE_LENGTH); 
-							i < (int)Math.ceil((startx + BITMAP_WIDTH)/ BLOCK_SIDE_LENGTH + 2);
-							i++){
-						for(int j = 0; j < blockArray[i].length; j++){
-							if(blockArray[i][j] != Brick.NONE){
-								RectF rDest = new RectF(
-										i*BLOCK_SIDE_LENGTH, 
-										j*BLOCK_SIDE_LENGTH,
-										(i+1)*BLOCK_SIDE_LENGTH, 
-										(j+1)*BLOCK_SIDE_LENGTH  
-										);
-								
-								if(blockArray[i][j] == Brick.BROWN )
-									canvas.drawBitmap(
-										brownBitmap, 
-										null,
-										rDest, 
-										null);
-								else
-									canvas.drawBitmap(
-										yellowBitmap, 
-										null,
-										rDest, 
-										null);
-							}
-						}
-					}
+					drawBrick(startx);
 					
 					Rect rSrc = new Rect(
 							startx,
@@ -270,15 +193,7 @@ public class LifeSurfaceView extends SurfaceView
 					canvas = new Canvas(bitmap);
 					canvas.drawBitmap(stageWithBricks, rSrc, rDest, null);
 					
-					/*
-					 * Draw hero
-					 */
-					int x1 = heroPositionX - (HERO_WIDTH - BLOCK_SIDE_LENGTH) / 2;
-					int y1 = (BITMAP_HEIGHT -heroPositionY) + BLOCK_SIDE_LENGTH - HERO_HEIGHT;
-					int x2 = x1 + HERO_WIDTH;
-					int y2 = y1 + HERO_HEIGHT;
-					RectF hDest = new RectF(x1, y1, x2, y2);
-					canvas.drawBitmap(heroBitmap, null, hDest, null);
+					drawHero(canvas);
 					
 					canvas = holder.lockCanvas();
 					canvas.drawBitmap(bitmap, 0, 0, null);
@@ -324,10 +239,10 @@ public class LifeSurfaceView extends SurfaceView
 					for(int j= 0; j < newBlockArray[i].length; j++)
 						newBlockArray[i][j] = Brick.NONE;
 				
-				for(int i = (int) Math.floor(startx/BLOCK_SIDE_LENGTH); i < blockArray.length; i++){
+				for(int i = (int) Math.floor(startx/BRICK_WIDTH); i < blockArray.length; i++){
 					newRandomBricksStartX ++;
 					for(int j = 0; j < blockArray[i].length; j++){
-						newBlockArray[i-(int) Math.floor(startx/BLOCK_SIDE_LENGTH)][j] 
+						newBlockArray[i-(int) Math.floor(startx/BRICK_WIDTH)][j] 
 								= blockArray[i][j];
 					}
 				}
@@ -347,16 +262,15 @@ public class LifeSurfaceView extends SurfaceView
 			}
 		}
 
-		
 		private void updateHero(){
-			if( (startx % BLOCK_SIDE_LENGTH) == 0){
-				int x = (heroPositionX + startx) / BLOCK_SIDE_LENGTH;
-				int y = (BITMAP_HEIGHT - heroPositionY) / BLOCK_SIDE_LENGTH;
+			if( (startx % BRICK_WIDTH) == 0){
+				int x = (int) ((heroPositionX + startx) / BRICK_WIDTH);
+				int y = (int) ((BITMAP_HEIGHT - heroPositionY) / BRICK_HEIGHT);
 				
-				if( ( y < (BITMAP_HEIGHT / BLOCK_SIDE_LENGTH - 1 ) ) && blockArray[x][y+1] == Brick.NONE)
-					heroPositionY -= BLOCK_SIDE_LENGTH;
+				if( ( y < (BITMAP_HEIGHT / BRICK_HEIGHT - 1 ) ) && blockArray[x][y+1] == Brick.NONE)
+					heroPositionY -= BRICK_HEIGHT;
 				else if ( (y > 1) && (blockArray[x+1][y] != Brick.NONE) && (blockArray[x+1][y-1] == Brick.NONE))
-					heroPositionY += BLOCK_SIDE_LENGTH;
+					heroPositionY += BRICK_HEIGHT;
 				
 			}
 		}
@@ -372,8 +286,8 @@ public class LifeSurfaceView extends SurfaceView
 					float y = event.getY();
 					Log.d("Life", "[onTouchEvent] x = " + x + ", y = " + y);
 					
-					int blockX = (int) Math.floor((x + startx)/BLOCK_SIDE_LENGTH);
-					int blockY = (int) Math.floor(y/BLOCK_SIDE_LENGTH);
+					int blockX = (int) Math.floor((x + startx)/BRICK_WIDTH);
+					int blockY = (int) Math.floor(y/BRICK_HEIGHT);
 					Log.d("Life", "[onTouchEvent] blockX = " + blockX + ", blockY = " + blockY);
 					
 					if(blockX != prevBlockX || blockY != prevBlockY){
@@ -428,7 +342,7 @@ public class LifeSurfaceView extends SurfaceView
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-		initializeContant(context);
+		initializeConstant(context);
 		
 		blockArray = new Brick[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
 		for(int i = 0; i < blockArray.length; i++)
@@ -478,7 +392,7 @@ public class LifeSurfaceView extends SurfaceView
 				int randomBrickHeight = BITMAP_HEIGHT - (int) (RANDOM_BRICK_HEIGHT_MIN*BITMAP_HEIGHT +
 						rand.nextInt((int)(RANDOM_BRICK_HEIGHT_MAX * BITMAP_HEIGHT - 
 								RANDOM_BRICK_HEIGHT_MIN* BITMAP_HEIGHT))) ;
-				int randomBrickBlockHeight = randomBrickHeight / BLOCK_SIDE_LENGTH;
+				int randomBrickBlockHeight = (int) (randomBrickHeight / BRICK_HEIGHT);
 
 				String brickPattern = Integer.toBinaryString((1 << rand.nextInt(randomBricksRemain)) + (1 << (randomBricksRemain))) + "0";
 				brickPattern = brickPattern.substring(1);
@@ -635,12 +549,7 @@ public class LifeSurfaceView extends SurfaceView
 		}
 	}
 	
-	private void initializeContant(Context context){
-		
-		BLOCK_SIDE_LENGTH = Integer.valueOf( 
-			context.getResources().
-			getString(R.string.block_side_length));
-
+	private void initializeConstant(Context context){
 		BRICK_HEIGHT = Integer.valueOf( 
 			context.getResources().
 			getString(R.string.brick_height));
@@ -683,27 +592,27 @@ public class LifeSurfaceView extends SurfaceView
 			context.getResources().
 					getString(R.string.back_pillar_height_min));
 		
-		BACK_PILLAR_SHADE_WIDTH_OFFSET = BACK_PILLAR_WIDTH * Double.valueOf(
-			context.getResources().
+		BACK_PILLAR_SHADE_WIDTH_OFFSET = 
+			BACK_PILLAR_WIDTH * Double.valueOf(context.getResources().
 			getString(R.string.back_pillar_shade_width_ratio));
 		
-		BACK_PILLAR_SHADE_HEIGHT_OFFSET = BACK_PILLAR_WIDTH * Double.valueOf(
-			context.getResources().
+		BACK_PILLAR_SHADE_HEIGHT_OFFSET = 
+			BACK_PILLAR_WIDTH * Double.valueOf(context.getResources().
 			getString(R.string.back_pillar_shade_height_ratio));
 		
-		HERO_HEIGHT = Integer.valueOf(
-			context.getResources().
+		HERO_HEIGHT = 
+			Integer.valueOf(context.getResources().
 					getString(R.string.hero_height));
-		HERO_WIDTH = Integer.valueOf(
-			context.getResources().
+		HERO_WIDTH = 
+			Integer.valueOf(context.getResources().
 					getString(R.string.hero_width));
 		
-		HERO_SHADE_HEIGHT_OFFSET = HERO_HEIGHT * Double.valueOf(
-			context.getResources().
+		HERO_SHADE_HEIGHT_OFFSET = 
+			HERO_HEIGHT * Double.valueOf(context.getResources().
 			getString(R.string.hero_shade_height_offset_ratio));
 		
-		HERO_SHADE_WIDTH_OFFSET = HERO_WIDTH * Double.valueOf(
-			context.getResources().
+		HERO_SHADE_WIDTH_OFFSET = 
+			HERO_WIDTH * Double.valueOf(context.getResources().
 			getString(R.string.hero_shade_width_offset_ratio));
 		
 		CLOUD_HEIGHT_MAX = Double.valueOf(
@@ -755,8 +664,8 @@ public class LifeSurfaceView extends SurfaceView
 			context.getResources().
 					getString(R.string.random_brick_threshold));
 		
-		heroPositionX *= BLOCK_SIDE_LENGTH;
-		heroPositionY *= BLOCK_SIDE_LENGTH;
+		heroPositionX *= BRICK_WIDTH;
+		heroPositionY *= BRICK_HEIGHT;
 		
 		GROUND_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
@@ -853,8 +762,8 @@ public class LifeSurfaceView extends SurfaceView
 				stage.getHeight(),
 				Bitmap.Config.ARGB_8888);
 		
-		BLOCK_NUMBER_X = (BITMAP_WIDTH * 3 + PILLAR_WIDTH) / BLOCK_SIDE_LENGTH;
-		BLOCK_NUMBER_Y = BITMAP_HEIGHT / BLOCK_SIDE_LENGTH;
+		BLOCK_NUMBER_X = (int) ((BITMAP_WIDTH * 3 + PILLAR_WIDTH) / BRICK_WIDTH);
+		BLOCK_NUMBER_Y = (int) (BITMAP_HEIGHT / BRICK_HEIGHT);
 	}
 
 	private void drawBush(Canvas canvas, int start){
@@ -1151,6 +1060,104 @@ public class LifeSurfaceView extends SurfaceView
 	}
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
+	}
+
+	private void drawBrickShade(Canvas canvas, int startx) {
+		/*
+		 * Draw bricks' shade
+		 */
+		Drawable shadeTile = context.getResources().getDrawable(R.drawable.shade);
+		Bitmap shadeBitmap = ((BitmapDrawable)shadeTile).getBitmap();
+		Paint brickShadePaint = new Paint();
+		brickShadePaint.setAlpha(BRICK_SHADE_ALPHA);
+		for(int i = (int)Math.floor(startx / BRICK_WIDTH); 
+				i < (int)Math.ceil((startx + BITMAP_WIDTH)/ BRICK_WIDTH + 2);
+				i++){
+			for(int j = 0; j < blockArray[i].length; j++){
+				if(blockArray[i][j] != Brick.NONE){
+					int x1 = (int) (i * BRICK_WIDTH - BRICK_SHADE_WIDTH_OFFSET);
+					int y1 = (int) (j * BRICK_HEIGHT + BRICK_SHADE_HEIGHT_OFFSET);
+					int x2 = (int) (x1 + BRICK_WIDTH);
+					int y2 = (int) (y1 + BRICK_HEIGHT);
+					
+					if(x1 < 0) x1 = 0;
+					if(y1 > BITMAP_HEIGHT) y1 = BITMAP_HEIGHT;
+					if(y2 > BITMAP_HEIGHT) y2 = BITMAP_HEIGHT;
+					
+					RectF rDest = new RectF(x1,y1,x2,y2);
+					
+					canvas.drawBitmap(shadeBitmap, null, rDest, brickShadePaint);
+				}
+			}
+		}
+	}
+
+	private void drawHeroShade(Canvas canvas, int startx) {
+		/*
+		 * Draw hero's shade
+		 */
+		Drawable heroShadeTile = context.getResources().getDrawable(R.drawable.hero_shade);
+		Bitmap heroShadeBitmap = ((BitmapDrawable)heroShadeTile).getBitmap();
+		Paint heroShadePaint = new Paint();
+		heroShadePaint.setAlpha(HERO_SHADE_ALPHA);
+		double sx1 = startx + heroPositionX - (HERO_WIDTH - BRICK_WIDTH)/2 - HERO_SHADE_WIDTH_OFFSET;
+		double sy1 = (BITMAP_HEIGHT - heroPositionY) + BRICK_HEIGHT - HERO_HEIGHT + HERO_SHADE_HEIGHT_OFFSET;
+		double sx2 = sx1 + HERO_WIDTH;
+		double sy2 = sy1 + HERO_HEIGHT;
+		RectF hsDest = new RectF((float)sx1, (float)sy1, (float)sx2, (float)sy2);
+		canvas.drawBitmap(heroShadeBitmap, null, hsDest, heroShadePaint);
+	}
+
+	private void drawBrick(int startx) {
+		/*
+		 * Draw bricks
+		 */
+		Drawable yellowTile = context.getResources().getDrawable(R.drawable.tile_yellow);
+		Drawable brownTile = context.getResources().getDrawable(R.drawable.tile_brown);
+		Bitmap yellowBitmap = ((BitmapDrawable)yellowTile).getBitmap();
+		Bitmap brownBitmap = ((BitmapDrawable)brownTile).getBitmap();
+		Canvas canvas = new Canvas(stageWithBricks);
+		for(int i = (int)Math.floor(startx / BRICK_WIDTH); 
+				i < (int)Math.ceil((startx + BITMAP_WIDTH)/ BRICK_WIDTH + 2);
+				i++){
+			for(int j = 0; j < blockArray[i].length; j++){
+				if(blockArray[i][j] != Brick.NONE){
+					RectF rDest = new RectF(
+							(float)(i*BRICK_WIDTH), 
+							(float)(j*BRICK_HEIGHT),
+							(float)((i+1)*BRICK_WIDTH), 
+							(float)((j+1)*BRICK_HEIGHT)  
+							);
+					
+					if(blockArray[i][j] == Brick.BROWN )
+						canvas.drawBitmap(
+							brownBitmap, 
+							null,
+							rDest, 
+							null);
+					else
+						canvas.drawBitmap(
+							yellowBitmap, 
+							null,
+							rDest, 
+							null);
+				}
+			}
+		}
+	}
+
+	private void drawHero(Canvas canvas) {
+		/*
+		 * Draw hero
+		 */
+		Drawable heroTile = context.getResources().getDrawable(R.drawable.hero);
+		Bitmap heroBitmap = ((BitmapDrawable)heroTile).getBitmap();
+		int x1 = (int) (heroPositionX - (HERO_WIDTH - BRICK_WIDTH) / 2);
+		int y1 = (int) ((BITMAP_HEIGHT -heroPositionY) + BRICK_HEIGHT - HERO_HEIGHT);
+		int x2 = x1 + HERO_WIDTH;
+		int y2 = y1 + HERO_HEIGHT;
+		RectF hDest = new RectF(x1, y1, x2, y2);
+		canvas.drawBitmap(heroBitmap, null, hDest, null);
 	}
 
 }
