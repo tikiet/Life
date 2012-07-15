@@ -332,35 +332,7 @@ public class LifeSurfaceView extends SurfaceView
 					}
 				}
 				
-				boolean randomBrickOn = false;
-				int randomBricksRemain = 0;
-				for(int i = newRandomBricksStartX; 
-						i < newBlockArray.length - RANDOM_BRICK_COUNT_MAX; 
-						i++){
-					Random rand = new Random();
-					if(randomBrickOn){
-						randomBricksRemain = RANDOM_BRICK_COUNT_MIN + 
-								rand.nextInt(RANDOM_BRICK_COUNT_MAX - RANDOM_BRICK_COUNT_MIN);
-						
-						int randomBrickHeight = BITMAP_HEIGHT - (int) (RANDOM_BRICK_HEIGHT_MIN*BITMAP_HEIGHT +
-								rand.nextInt((int)(RANDOM_BRICK_HEIGHT_MAX * BITMAP_HEIGHT - 
-										RANDOM_BRICK_HEIGHT_MIN* BITMAP_HEIGHT))) ;
-						int randomBrickBlockHeight = randomBrickHeight / BLOCK_SIDE_LENGTH;
-
-						String brickPattern = Integer.toBinaryString((1 << rand.nextInt(randomBricksRemain)) + (1 << (randomBricksRemain))) + "0";
-						brickPattern = brickPattern.substring(1);
-						for(int j = 0; j < randomBricksRemain; j++){
-							newBlockArray[i + j][randomBrickBlockHeight] = 
-									Integer.valueOf(brickPattern.substring(j,j+1)) == 1 ? Brick.BROWN : Brick.YELLOW;
-						}
-						randomBrickOn = false;
-						i+= randomBricksRemain / 2;
-					}else{
-						if(rand.nextDouble() >= RANDOM_BRICK_THRESHOLD){
-							randomBrickOn = true;
-						}
-					}
-				}
+				generateRandomBrick(newRandomBricksStartX, newBlockArray);
 				drawGroundAndSubterranean(canvas, BITMAP_WIDTH - stagePillarShift);
 				drawGrass(canvas, BITMAP_WIDTH - stagePillarShift);
 				drawBush(canvas, BITMAP_WIDTH - stagePillarShift);
@@ -370,6 +342,7 @@ public class LifeSurfaceView extends SurfaceView
 			}
 		}
 
+		
 		private void updateHero(){
 			if( (startx % BLOCK_SIDE_LENGTH) == 0){
 				int x = (heroPositionX + startx) / BLOCK_SIDE_LENGTH;
@@ -454,37 +427,7 @@ public class LifeSurfaceView extends SurfaceView
 			for(int j= 0; j < blockArray[i].length; j++)
 				blockArray[i][j] = Brick.NONE;
 		
-		boolean randomBrickOn = false;
-		int randomBricksRemain = 0;
-		for(int i = 0; i < blockArray.length - RANDOM_BRICK_COUNT_MAX; i++){
-			Random rand = new Random();
-			if(randomBrickOn){
-				randomBricksRemain = RANDOM_BRICK_COUNT_MIN + 
-						rand.nextInt( RANDOM_BRICK_COUNT_MAX - RANDOM_BRICK_COUNT_MIN );
-				
-				
-				int randomBrickHeight = BITMAP_HEIGHT - (int) (RANDOM_BRICK_HEIGHT_MIN*BITMAP_HEIGHT +
-						rand.nextInt((int)(RANDOM_BRICK_HEIGHT_MAX * BITMAP_HEIGHT - 
-								RANDOM_BRICK_HEIGHT_MIN* BITMAP_HEIGHT))) ;
-				int randomBrickBlockHeight = randomBrickHeight / BLOCK_SIDE_LENGTH;
-				
-				String brickPattern = Integer.toBinaryString((1 << rand.nextInt(randomBricksRemain)) + (1 << (randomBricksRemain))) + "0";
-				brickPattern = brickPattern.substring(1);
-				Log.d("Life", "brickPattern:"+brickPattern);
-				
-				for(int j = 0; j < randomBricksRemain; j++){
-					blockArray[i + j][randomBrickBlockHeight] = 
-							Integer.valueOf(brickPattern.substring(j,j+1)) == 1 ? Brick.BROWN : Brick.YELLOW;
-				}
-				
-				randomBrickOn = false;
-				i+= randomBricksRemain / 2;
-			}else{
-				if(rand.nextDouble() >= RANDOM_BRICK_THRESHOLD){
-					randomBrickOn = true;
-				}
-			}
-		}
+		generateRandomBrick(0, blockArray);
 			
 		canvas = new Canvas(stage);
 		Paint backGroundPaint = new Paint();
@@ -508,6 +451,40 @@ public class LifeSurfaceView extends SurfaceView
 		drawTree(canvas, 0);
 		
 		thread.start();
+	}
+	
+	private void generateRandomBrick(int start, Brick[][] array) {
+		boolean randomBrickOn = false;
+		int randomBricksRemain = 0;
+		for(int i = start; 
+				i < array.length - RANDOM_BRICK_COUNT_MAX; 
+				i++){
+			Random rand = new Random();
+			if(randomBrickOn){
+				randomBricksRemain = RANDOM_BRICK_COUNT_MIN + 
+						rand.nextInt(RANDOM_BRICK_COUNT_MAX - RANDOM_BRICK_COUNT_MIN);
+				
+				int randomBrickHeight = BITMAP_HEIGHT - (int) (RANDOM_BRICK_HEIGHT_MIN*BITMAP_HEIGHT +
+						rand.nextInt((int)(RANDOM_BRICK_HEIGHT_MAX * BITMAP_HEIGHT - 
+								RANDOM_BRICK_HEIGHT_MIN* BITMAP_HEIGHT))) ;
+				int randomBrickBlockHeight = randomBrickHeight / BLOCK_SIDE_LENGTH;
+
+				String brickPattern = Integer.toBinaryString((1 << rand.nextInt(randomBricksRemain)) + (1 << (randomBricksRemain))) + "0";
+				brickPattern = brickPattern.substring(1);
+				Log.d("Life", "brickPattern:" + brickPattern);
+				
+				for(int j = 0; j < randomBricksRemain; j++){
+					array[i + j][randomBrickBlockHeight] = 
+							Integer.valueOf(brickPattern.substring(j,j+1)) == 1 ? Brick.BROWN : Brick.YELLOW;
+				}
+				randomBrickOn = false;
+				i+= randomBricksRemain / 2;
+			}else{
+				if(rand.nextDouble() >= RANDOM_BRICK_THRESHOLD){
+					randomBrickOn = true;
+				}
+			}
+		}
 	}
 
 	private void drawCloudAndShade(Canvas canvas, int start) {
