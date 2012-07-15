@@ -333,10 +333,15 @@ public class LifeSurfaceView extends SurfaceView
 				}
 				
 				generateRandomBrick(newRandomBricksStartX, newBlockArray);
+				
 				drawGroundAndSubterranean(canvas, BITMAP_WIDTH - stagePillarShift);
+				
 				drawGrass(canvas, BITMAP_WIDTH - stagePillarShift);
+				
 				drawBush(canvas, BITMAP_WIDTH - stagePillarShift);
+				
 				drawTree(canvas, BITMAP_WIDTH - stagePillarShift);
+				
 				blockArray = newBlockArray;
 				startx = 0;
 			}
@@ -404,6 +409,14 @@ public class LifeSurfaceView extends SurfaceView
 		this.context = context;
 	}
 
+	public void setHeight(int height){
+		BITMAP_HEIGHT = height;
+	}
+	
+	public void setWidth(int width){
+		BITMAP_WIDTH = width;
+	}
+	
 	@Override
 	public boolean onTouchEvent(MotionEvent event){
 		return thread.onTouchEvent(event);
@@ -415,10 +428,10 @@ public class LifeSurfaceView extends SurfaceView
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-		Canvas canvas = holder.lockCanvas();
-		BITMAP_WIDTH = canvas.getWidth();
-		BITMAP_HEIGHT = canvas.getHeight();
-		holder.unlockCanvasAndPost(canvas);
+//		Canvas canvas = holder.lockCanvas();
+//		BITMAP_WIDTH = canvas.getWidth();
+//		BITMAP_HEIGHT = canvas.getHeight();
+//		holder.unlockCanvasAndPost(canvas);
 		
 		initializeContant(context);
 		
@@ -429,7 +442,7 @@ public class LifeSurfaceView extends SurfaceView
 		
 		generateRandomBrick(0, blockArray);
 			
-		canvas = new Canvas(stage);
+		Canvas canvas = new Canvas(stage);
 		Paint backGroundPaint = new Paint();
 		backGroundPaint.setColor(BACK_GROUND_COLOR);
 		canvas.drawRect(
@@ -442,12 +455,15 @@ public class LifeSurfaceView extends SurfaceView
 		drawBackPillarAndShade(canvas, BACK_PILLAR_WIDTH /2);
 		
 		drawPillar(canvas, 0);
-		
+
 		drawCloudAndShade(canvas, 0);
 		
 		drawGroundAndSubterranean(canvas, 0);
+		
 		drawGrass(canvas, 0);
+		
 		drawBush(canvas, 0);
+		
 		drawTree(canvas, 0);
 		
 		thread.start();

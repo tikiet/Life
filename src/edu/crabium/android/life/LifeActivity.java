@@ -1,7 +1,11 @@
 package edu.crabium.android.life;
 
 import android.app.Activity;
+import android.graphics.Point;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.util.Log;
+import android.view.Display;
 import android.view.Window;
 import android.view.WindowManager;
 
@@ -13,6 +17,13 @@ public class LifeActivity extends Activity {
         super.onCreate(savedInstanceState);
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         this.getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+        DisplayMetrics displaymetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+        
         setContentView(R.layout.main);
+        LifeSurfaceView lifeSurfaceView = (LifeSurfaceView)findViewById(R.id.surfaceView1);
+        lifeSurfaceView.setHeight(displaymetrics.heightPixels);
+        lifeSurfaceView.setWidth(displaymetrics.widthPixels);
     }
 }
