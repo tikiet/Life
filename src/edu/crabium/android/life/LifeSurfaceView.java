@@ -8,13 +8,11 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.Shader;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
@@ -31,6 +29,7 @@ public class LifeSurfaceView extends SurfaceView
 	private Bitmap bitmap;
 	private Bitmap stage;
 	private Bitmap stageWithBricks;
+	
 	private int stagePillarShift;
 	private int stageBackPillarShift;
 	private int heroPositionX = 2;
@@ -57,6 +56,7 @@ public class LifeSurfaceView extends SurfaceView
 	private double TRUNK_WIDTH;
 	private double TREE_SPACE_COUNT;
 	private double TREE_SHADE_ANGLE;
+	private double TREE_CROWN_SHADE_HEIGHT_OFFSET_RATIO;
 	
 	private double BUSH_WIDTH;
 	private double BUSH_HEIGHT_MAX;
@@ -64,38 +64,56 @@ public class LifeSurfaceView extends SurfaceView
 	private double BUSH_HEIGHT_OFFSET_FROM_WALL;
 	private double BUSH_HEIGHT_OFFSET_FROM_BUSH;
 	private double BUSH_SPACE_COUNT;
+	private double BUSH_SHADE_HEIGHT_OFFSET_RATIO;
+	private double BUSH_SHADE_WIDTH_OFFSET_RATIO;
 	
 	private int BITMAP_WIDTH;
 	private int BITMAP_HEIGHT;
 	private int BLOCK_NUMBER_X;
 	private int BLOCK_NUMBER_Y;
-	private int BLOCK_SIDE_LENGTH;
+	
 	private double CLOUD_HEIGHT_MAX;
 	private double CLOUD_HEIGHT_MIN;
 	private int CLOUD_WIDTH_MAX;
 	private int CLOUD_WIDTH_MIN;
+	private double CLOUD_SPACE_RATIO;
+	private double CLOUD_SHADE_HEIGHT_OFFSET_RATIO;
+	private double CLOUD_SHADE_WIDTH_OFFSET_RATIO;
 	
 	private int PILLAR_WIDTH;
 	private double PILLAR_HEIGHT_MAX;
 	private double PILLAR_HEIGHT_MIN;
+	private double PILLAR_SPACE;
 	
 	private int BACK_PILLAR_WIDTH;
 	private double BACK_PILLAR_HEIGHT_MAX;
 	private double BACK_PILLAR_HEIGHT_MIN;
-	private double BACK_PILLAR_SHADE_HEIGHT_OFFSET = 20;
+	private double BACK_PILLAR_SHADE_HEIGHT_OFFSET;
 	private double BACK_PILLAR_SHADE_WIDTH_OFFSET;
+	private double BACK_PILLAR_SPACE;
 	
 	private int HERO_HEIGHT;
 	private int HERO_WIDTH;
+	private double HERO_SHADE_HEIGHT_OFFSET;
+	private double HERO_SHADE_WIDTH_OFFSET;
 	
 	private int RANDOM_BRICK_COUNT_MAX;
 	private int RANDOM_BRICK_COUNT_MIN;
 	private double RANDOM_BRICK_HEIGHT_MAX;
 	private double RANDOM_BRICK_HEIGHT_MIN;
 	private double RANDOM_BRICK_THRESHOLD;
+
+	private int BLOCK_SIDE_LENGTH;
+	private double BRICK_HEIGHT;
+	private double BRICK_WIDTH;
+	private double BRICK_SHADE_HEIGHT_OFFSET;
+	private double BRICK_SHADE_WIDTH_OFFSET;
+	private double BROWN_BRICK_THRESHOLD;
 	
 	private int BACK_PILLAR_SHADE_ALPHA = 30;
 	private int CLOUD_SHADE_ALPHA = 60;
+	private int BRICK_SHADE_ALPHA = 60;
+	private int BUSH_SHADE_ALPHA = 60;
 	
 	private int[][] blockArray;
 	private int[] pillarColor = new int[]{
@@ -110,7 +128,6 @@ public class LifeSurfaceView extends SurfaceView
 			0xff7c632c,0xffd4ba5b,0xffc1a446
 	};
 	
-	private SurfaceHolder surfaceHolder;
 	private Context context;
 	
 	private class PillarPosition{
@@ -132,23 +149,46 @@ public class LifeSurfaceView extends SurfaceView
 	}
 	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
-			surfaceHolder = holder;
 			
 			BLOCK_SIDE_LENGTH = Integer.valueOf( 
 					context.getResources().
 							getString(R.string.block_side_length));
+			
+			BRICK_HEIGHT = Integer.valueOf( 
+					context.getResources().
+					getString(R.string.brick_height));
+			BRICK_WIDTH = Integer.valueOf( 
+					context.getResources().
+					getString(R.string.brick_width));
+
+			BROWN_BRICK_THRESHOLD = Double.valueOf(
+					context.getResources().
+							getString(R.string.brown_brick_threshold));
+			
 			PILLAR_WIDTH = Integer.valueOf(
 					context.getResources().
 							getString(R.string.pillar_width));
+			
 			PILLAR_HEIGHT_MAX = Double.valueOf(
 					context.getResources().
 							getString(R.string.pillar_height_max));
+			
 			PILLAR_HEIGHT_MIN = Double.valueOf(
 					context.getResources().
 							getString(R.string.pillar_height_min));
+			
+			PILLAR_SPACE = Integer.valueOf(
+					context.getResources().
+							getString(R.string.pillar_space));
+			
 			BACK_PILLAR_WIDTH = Integer.valueOf(
 					context.getResources().
 							getString(R.string.back_pillar_width));
+			
+			BACK_PILLAR_SPACE = Integer.valueOf(
+					context.getResources().
+							getString(R.string.back_pillar_space));
+			
 			BACK_PILLAR_HEIGHT_MAX = Double.valueOf(
 					context.getResources().
 							getString(R.string.back_pillar_height_max));
@@ -156,7 +196,13 @@ public class LifeSurfaceView extends SurfaceView
 					context.getResources().
 							getString(R.string.back_pillar_height_min));
 			
-			BACK_PILLAR_SHADE_WIDTH_OFFSET = BACK_PILLAR_WIDTH / 3;
+			BACK_PILLAR_SHADE_WIDTH_OFFSET = BACK_PILLAR_WIDTH * Double.valueOf(
+					context.getResources().
+					getString(R.string.back_pillar_shade_width_ratio));
+			
+			BACK_PILLAR_SHADE_HEIGHT_OFFSET = BACK_PILLAR_WIDTH * Double.valueOf(
+					context.getResources().
+					getString(R.string.back_pillar_shade_height_ratio));
 			
 			HERO_HEIGHT = Integer.valueOf(
 					context.getResources().
@@ -164,6 +210,14 @@ public class LifeSurfaceView extends SurfaceView
 			HERO_WIDTH = Integer.valueOf(
 					context.getResources().
 							getString(R.string.hero_width));
+			
+			HERO_SHADE_HEIGHT_OFFSET = HERO_HEIGHT * Double.valueOf(
+					context.getResources().
+					getString(R.string.hero_shade_height_offset_ratio));
+			
+			HERO_SHADE_WIDTH_OFFSET = HERO_WIDTH * Double.valueOf(
+					context.getResources().
+					getString(R.string.hero_shade_width_offset_ratio));
 			
 			CLOUD_HEIGHT_MAX = Double.valueOf(
 					context.getResources().
@@ -177,6 +231,25 @@ public class LifeSurfaceView extends SurfaceView
 			CLOUD_WIDTH_MIN = Integer.valueOf(
 					context.getResources().
 							getString(R.string.cloud_width_min));
+			CLOUD_SPACE_RATIO = Double.valueOf(
+					context.getResources().
+							getString(R.string.cloud_space_ratio));
+			
+			CLOUD_SHADE_HEIGHT_OFFSET_RATIO = Double.valueOf(
+					context.getResources().
+					getString(R.string.cloud_shade_height_offset_ratio));
+			
+			CLOUD_SHADE_WIDTH_OFFSET_RATIO = Double.valueOf(
+					context.getResources().
+					getString(R.string.cloud_shade_width_offset_ratio));
+			
+			BUSH_SHADE_HEIGHT_OFFSET_RATIO = Double.valueOf(
+					context.getResources().
+					getString(R.string.bush_shade_height_offset_ratio));
+			
+			BUSH_SHADE_WIDTH_OFFSET_RATIO = Double.valueOf(
+					context.getResources().
+					getString(R.string.bush_shade_width_offset_ratio));
 			
 			RANDOM_BRICK_HEIGHT_MAX = Double.valueOf(
 					context.getResources().
@@ -208,19 +281,15 @@ public class LifeSurfaceView extends SurfaceView
 				Drawable shadeTile = context.getResources().getDrawable(R.drawable.shade);
 				Drawable heroTile = context.getResources().getDrawable(R.drawable.hero);
 				Drawable heroShadeTile = context.getResources().getDrawable(R.drawable.hero_shade);
-				Drawable cloud1Tile = context.getResources().getDrawable(R.drawable.cloud1);
-				Drawable cloud1ShadeTile = context.getResources().getDrawable(R.drawable.cloud1_shade);
 				
 				Bitmap yellowBitmap = ((BitmapDrawable)yellowTile).getBitmap();
 				Bitmap brownBitmap = ((BitmapDrawable)brownTile).getBitmap();
 				Bitmap shadeBitmap = ((BitmapDrawable)shadeTile).getBitmap();
 				Bitmap heroBitmap = ((BitmapDrawable)heroTile).getBitmap();
 				Bitmap heroShadeBitmap = ((BitmapDrawable)heroShadeTile).getBitmap();
-				Bitmap cloud1Bitmap = ((BitmapDrawable)cloud1Tile).getBitmap();
-				Bitmap cloud1ShadeBitmap = ((BitmapDrawable)cloud1ShadeTile).getBitmap();
 				
-				while(startx <= BITMAP_WIDTH*2){
-					Log.d("Life", "startx=" + startx);
+				while(startx <= BITMAP_WIDTH * 2){
+					Log.d("Life", "startx = " + startx);
 					Canvas canvas = new Canvas(stageWithBricks);
 					RectF stageRectF = new RectF(
 							0,
@@ -230,23 +299,23 @@ public class LifeSurfaceView extends SurfaceView
 					
 					canvas.drawBitmap(stage, null, stageRectF, null);
 					
-	
 					updateHero();
 					
 					/*
-					 * Draw shade
+					 * Draw bricks' shade
 					 */
 					Paint paint = new Paint();
-					paint.setAlpha(60);
+					paint.setAlpha(BRICK_SHADE_ALPHA);
 					for(int i = (int)Math.floor(startx / BLOCK_SIDE_LENGTH); 
 							i < (int)Math.ceil((startx + BITMAP_WIDTH)/ BLOCK_SIDE_LENGTH + 2);
 							i++){
 						for(int j = 0; j < blockArray[i].length; j++){
 							if(blockArray[i][j] != 0){
-								int x1 = i * BLOCK_SIDE_LENGTH - BLOCK_SIDE_LENGTH / 2;
-								int y1 = j * BLOCK_SIDE_LENGTH + BLOCK_SIDE_LENGTH / 2;
+								int x1 = (int) (i * BLOCK_SIDE_LENGTH - BRICK_SHADE_WIDTH_OFFSET);
+								int y1 = (int) (j * BLOCK_SIDE_LENGTH + BRICK_SHADE_HEIGHT_OFFSET);
 								int x2 = x1 + BLOCK_SIDE_LENGTH;
 								int y2 = y1 + BLOCK_SIDE_LENGTH;
+								
 								if(x1 < 0) x1 = 0;
 								if(y1 > BITMAP_HEIGHT) y1 = BITMAP_HEIGHT;
 								if(y2 > BITMAP_HEIGHT) y2 = BITMAP_HEIGHT;
@@ -261,13 +330,12 @@ public class LifeSurfaceView extends SurfaceView
 					/*
 					 * Draw hero's shade
 					 */
-					int sx1 = startx + heroPositionX - (HERO_WIDTH - BLOCK_SIDE_LENGTH)/2 - BLOCK_SIDE_LENGTH / 2;
-					int sy1 = (BITMAP_HEIGHT -heroPositionY) + BLOCK_SIDE_LENGTH - HERO_HEIGHT + BLOCK_SIDE_LENGTH / 2;
-					int sx2 = sx1 + HERO_WIDTH;
-					int sy2 = sy1 + HERO_HEIGHT;
-					RectF hsDest = new RectF(sx1, sy1, sx2, sy2);
+					double sx1 = startx + heroPositionX - (HERO_WIDTH - BLOCK_SIDE_LENGTH)/2 - HERO_SHADE_WIDTH_OFFSET;
+					double sy1 = (BITMAP_HEIGHT - heroPositionY) + BLOCK_SIDE_LENGTH - HERO_HEIGHT + HERO_SHADE_HEIGHT_OFFSET;
+					double sx2 = sx1 + HERO_WIDTH;
+					double sy2 = sy1 + HERO_HEIGHT;
+					RectF hsDest = new RectF((float)sx1, (float)sy1, (float)sx2, (float)sy2);
 					canvas.drawBitmap(heroShadeBitmap, null, hsDest, paint);
-					
 					
 					/*
 					 * Draw bricks
@@ -320,7 +388,7 @@ public class LifeSurfaceView extends SurfaceView
 					/*
 					 * Draw hero
 					 */
-					int x1 = heroPositionX - (HERO_WIDTH - BLOCK_SIDE_LENGTH)/2;
+					int x1 = heroPositionX - (HERO_WIDTH - BLOCK_SIDE_LENGTH) / 2;
 					int y1 = (BITMAP_HEIGHT -heroPositionY) + BLOCK_SIDE_LENGTH - HERO_HEIGHT;
 					int x2 = x1 + HERO_WIDTH;
 					int y2 = y1 + HERO_HEIGHT;
@@ -365,6 +433,7 @@ public class LifeSurfaceView extends SurfaceView
 				paint.setColor(Color.BLACK);
 				paint.setAlpha(BACK_PILLAR_SHADE_ALPHA);
 				paint.setAntiAlias(true);
+				
 				List<PillarPosition> backPillarPositionList = new LinkedList<PillarPosition>();
 				for(int i = BITMAP_WIDTH + BACK_PILLAR_WIDTH - stageBackPillarShift ; i < stage.getWidth(); i += BACK_PILLAR_WIDTH){
 					Random rand = new Random();
@@ -373,11 +442,11 @@ public class LifeSurfaceView extends SurfaceView
 							(int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MAX 
 									- BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN));
 					
-					if(i+BACK_PILLAR_WIDTH <= stage.getWidth()){
+					if( i + BACK_PILLAR_WIDTH <= stage.getWidth()){
 						backPillarPositionList.add(new PillarPosition(i, backPillarHeight));
 						
 						double x1 = i - BACK_PILLAR_SHADE_WIDTH_OFFSET;
-						double y1 = BITMAP_HEIGHT - backPillarHeight + BACK_PILLAR_SHADE_HEIGHT_OFFSET - BACK_PILLAR_WIDTH / 2;
+						double y1 = BITMAP_HEIGHT - (backPillarHeight - BACK_PILLAR_SHADE_HEIGHT_OFFSET + BACK_PILLAR_WIDTH / 2);
 						RectF rectF = new RectF(
 								(float) (x1),
 								(float) (y1), 
@@ -386,25 +455,14 @@ public class LifeSurfaceView extends SurfaceView
 								);
 						
 						canvas.drawRoundRect(rectF, BACK_PILLAR_WIDTH / 2, BACK_PILLAR_WIDTH / 2, paint);
-//						canvas.drawCircle(
-//								(float) (i+BACK_PILLAR_WIDTH / 2 - BACK_PILLAR_SHADE_WIDTH_OFFSET), 
-//								(float) (BITMAP_HEIGHT - backPillarHeight + BACK_PILLAR_SHADE_HEIGHT_OFFSET), 
-//								BACK_PILLAR_WIDTH/2, 
-//								paint);
-//						
-//						canvas.drawRect(
-//								(float)(i - BACK_PILLAR_SHADE_WIDTH_OFFSET), 
-//								(float)(BITMAP_HEIGHT - backPillarHeight + BACK_PILLAR_SHADE_HEIGHT_OFFSET), 
-//								i+BACK_PILLAR_WIDTH, 
-//								BITMAP_HEIGHT, 
-//								paint);
 					}
 					else{
 						stageBackPillarShift = stage.getWidth() - i;
 					}
 					
-					i += rand.nextInt(5) + 5;
+					i += rand.nextInt((int) BACK_PILLAR_SPACE) + BACK_PILLAR_SPACE;
 				}
+				
 				/*
 				 * Draw back pillars
 				 */
@@ -415,9 +473,9 @@ public class LifeSurfaceView extends SurfaceView
 					paint.setColor(backPillarColor[rand.nextInt(backPillarColor.length)]);
 					
 						canvas.drawCircle(
-								(float)(pillarPosition.getX()+BACK_PILLAR_WIDTH/2), 
+								(float)(pillarPosition.getX() + BACK_PILLAR_WIDTH / 2), 
 								(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
-								BACK_PILLAR_WIDTH/2, 
+								BACK_PILLAR_WIDTH / 2, 
 								paint);
 						canvas.drawRect(
 								(float)(pillarPosition.getX()), 
@@ -438,16 +496,16 @@ public class LifeSurfaceView extends SurfaceView
 							(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX - BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
 					paint.setColor(pillarColor[rand.nextInt(pillarColor.length)]);
 					
-					if(i+PILLAR_WIDTH <= stage.getWidth() - stageBackPillarShift ){
+					if( i + PILLAR_WIDTH <= stage.getWidth() - stageBackPillarShift ){
 					canvas.drawCircle(
-							i+PILLAR_WIDTH/2, 
+							i + PILLAR_WIDTH / 2, 
 							BITMAP_HEIGHT - pillarHeight, 
-							PILLAR_WIDTH/2, 
+							PILLAR_WIDTH / 2, 
 							paint);
 					canvas.drawRect(
 							i, 
 							BITMAP_HEIGHT - pillarHeight, 
-							i+PILLAR_WIDTH, 
+							i + PILLAR_WIDTH, 
 							BITMAP_HEIGHT, 
 							paint);
 					
@@ -455,33 +513,44 @@ public class LifeSurfaceView extends SurfaceView
 					else{
 						stagePillarShift = stage.getWidth() - i;
 					}
-					i += rand.nextInt(5) + 5;
+					i += rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE;
 				}
 				
 				/*
 				 * Draw clouds
 				 */
-				for(int i = BITMAP_WIDTH + PILLAR_WIDTH; i< stage.getWidth(); i += CLOUD_WIDTH_MAX*1.2 ){
+				Drawable cloud1Tile = context.getResources().getDrawable(R.drawable.cloud1);
+				Drawable cloud1ShadeTile = context.getResources().getDrawable(R.drawable.cloud1_shade);
+				
+				Bitmap cloud1Bitmap = ((BitmapDrawable)cloud1Tile).getBitmap();
+				Bitmap cloud1ShadeBitmap = ((BitmapDrawable)cloud1ShadeTile).getBitmap();
+				
+				for(int i = BITMAP_WIDTH + PILLAR_WIDTH; i< stage.getWidth(); i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO ){
 					Random rand = new Random();
-					if(i + CLOUD_WIDTH_MIN*1.5 <= stage.getWidth()){
+					if(i + CLOUD_WIDTH_MIN * 1.5 <= stage.getWidth()){
 						int cloudWidth = CLOUD_WIDTH_MIN + rand.nextInt(CLOUD_WIDTH_MAX - CLOUD_WIDTH_MIN);
 						int cloudHeight = (int) (BITMAP_HEIGHT * 
 								(1-(CLOUD_HEIGHT_MIN + rand.nextDouble()*(CLOUD_HEIGHT_MAX - CLOUD_HEIGHT_MIN))));
+						
 						int x1 = i;
 						int y1 = cloudHeight;
 						int x2 = x1 + cloudWidth;
 						int y2 = y1 + cloudWidth;
 						
 						RectF cloudRectF = new RectF(x1, y1, x2, y2);
-						RectF shadeRectF = new RectF(x1 - cloudWidth / 4, y1 + cloudWidth / 4,
-								x2 -cloudWidth / 4, y2 + cloudWidth / 4);
+						RectF shadeRectF = new RectF(
+								(float)(x1 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
+								(float)(y1 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO),
+								(float)(x2 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
+								(float)(y2 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO)
+								);
 						
 						Paint shadePaint = new Paint();
-						shadePaint.setAlpha(60);
+						shadePaint.setAlpha(CLOUD_SHADE_ALPHA);
 						canvas.drawBitmap(cloud1ShadeBitmap, null, shadeRectF, shadePaint);
 						canvas.drawBitmap(cloud1Bitmap, null, cloudRectF, null);
 						
-						i += CLOUD_WIDTH_MIN * 1.5 * rand.nextDouble();
+						i += CLOUD_WIDTH_MIN * CLOUD_SPACE_RATIO * rand.nextDouble();
 					}
 				}
 				
@@ -554,11 +623,11 @@ public class LifeSurfaceView extends SurfaceView
 					
 					float x = event.getX();
 					float y = event.getY();
-					Log.d("Life", "x=" + x + ", y = " + y);
+					Log.d("Life", "[onTouchEvent] x = " + x + ", y = " + y);
 					
 					int blockX = (int) Math.floor((x + startx)/BLOCK_SIDE_LENGTH);
 					int blockY = (int) Math.floor(y/BLOCK_SIDE_LENGTH);
-					Log.d("Life", "blockX=" + blockX + ", blockY=" + blockY);
+					Log.d("Life", "[onTouchEvent] blockX = " + blockX + ", blockY = " + blockY);
 					
 					if(blockX != prevBlockX || blockY != prevBlockY){
 						prevBlockX = blockX;
@@ -568,46 +637,15 @@ public class LifeSurfaceView extends SurfaceView
 						if(blockArray[blockX][blockY] == 1)
 								blockArray[blockX][blockY] = 0;
 						else if(blockArray[blockX][blockY] != 2){
-							if(rand.nextInt(4) >=3)
+							if(rand.nextDouble() >= BROWN_BRICK_THRESHOLD)
 								blockArray[blockX][blockY] = 2;
 							else
 								blockArray[blockX][blockY] = 1;
 						}
-//						
-//						Canvas canvas = new Canvas(bitmap);
-//						canvas = new Canvas(bitmap);
-//				/*		Paint paint = new Paint();
-//						paint.setDither(true);
-//						paint.setColor(BACK_GROUND_COLOR);
-//						//paint.setShader(lg);
-//						canvas.drawRect(
-//								(float)0.0, 
-//								(float)0.0, 
-//								(float)BITMAP_WIDTH, 
-//								(float)BITMAP_HEIGHT, 
-//								paint);
-//				*/
-//						
-//						Drawable d = context.getResources().
-//								getDrawable(R.drawable.tile);
-//						Bitmap bm = ((BitmapDrawable)d).getBitmap();
-//						
-//						for(int i = 0; i < BLOCK_NUMBER_X; i++)
-//							for(int j = 0; j < BLOCK_NUMBER_Y; j++)
-//								if(blockArray[i][j] != 0)
-//									canvas.drawBitmap(bm, 
-//											i*BLOCK_SIDE_LENGTH,
-//											j*BLOCK_SIDE_LENGTH,
-//											null);
-//						
-//						canvas = surfaceHolder.lockCanvas(null);
-//						canvas.drawBitmap(bitmap, 0, 0, null);
-//						surfaceHolder.unlockCanvasAndPost(canvas);
 					}
 					else{
-						Log.d("Life", "blockX:" + blockX +", blockY" + blockY);
-						Log.d("Life", "prevBlockX:" + prevBlockX +
-								", prevBlockY" + prevBlockY);
+						Log.d("Life", "[onTouchEvent] prevBlockX = " + prevBlockX +
+								", prevBlockY = " + prevBlockY);
 					}
 				}
 			}
@@ -685,6 +723,10 @@ public class LifeSurfaceView extends SurfaceView
 				context.getResources().
 						getString(R.string.tree_shade_angle));
 
+		TREE_CROWN_SHADE_HEIGHT_OFFSET_RATIO = Double.valueOf(
+				context.getResources().
+				getString(R.string.tree_crown_shade_height_offset_ratio));
+		
 		BUSH_WIDTH = BITMAP_WIDTH * Double.valueOf(
 				context.getResources().
 						getString(R.string.bush_width_ratio));
@@ -709,6 +751,14 @@ public class LifeSurfaceView extends SurfaceView
 				context.getResources().
 						getString(R.string.bush_space_count));
 		
+		BRICK_SHADE_HEIGHT_OFFSET = BRICK_HEIGHT * Double.valueOf(
+				context.getResources().
+				getString(R.string.brick_shade_height_offset_ratio));
+		
+		BRICK_SHADE_WIDTH_OFFSET = BRICK_WIDTH * Double.valueOf(
+				context.getResources().
+				getString(R.string.brick_shade_width_offset_ratio));
+				
 		bitmap = Bitmap.createBitmap(
 				BITMAP_WIDTH, 
 				BITMAP_HEIGHT, 
@@ -724,13 +774,9 @@ public class LifeSurfaceView extends SurfaceView
 				stage.getHeight(),
 				Bitmap.Config.ARGB_8888);
 		
-		BLOCK_NUMBER_X = (BITMAP_WIDTH * 3 + PILLAR_WIDTH) 
-				/ BLOCK_SIDE_LENGTH;
+		BLOCK_NUMBER_X = (BITMAP_WIDTH * 3 + PILLAR_WIDTH) / BLOCK_SIDE_LENGTH;
 		BLOCK_NUMBER_Y = BITMAP_HEIGHT / BLOCK_SIDE_LENGTH;
 		blockArray = new int[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
-
-		Log.d("Life","RANDOM_BRICK_COUNT_MIN:" + RANDOM_BRICK_COUNT_MIN );
-		Log.d("Life","RANDOM_BRICK_COUNT_MAX:" + RANDOM_BRICK_COUNT_MAX );
 		
 		boolean randomBrickOn = false;
 		int randomBricksRemain = 0;
@@ -789,11 +835,11 @@ public class LifeSurfaceView extends SurfaceView
 					(int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MAX 
 							- BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN));
 			
-			if(i+BACK_PILLAR_WIDTH <= stage.getWidth()){
+			if( i + BACK_PILLAR_WIDTH <= stage.getWidth()){
 				backPillarPositionList.add(new PillarPosition(i, backPillarHeight));
 				
 				double x1 = i - BACK_PILLAR_SHADE_WIDTH_OFFSET;
-				double y1 = BITMAP_HEIGHT - backPillarHeight + BACK_PILLAR_SHADE_HEIGHT_OFFSET - BACK_PILLAR_WIDTH / 2;
+				double y1 = BITMAP_HEIGHT - (backPillarHeight - BACK_PILLAR_SHADE_HEIGHT_OFFSET + BACK_PILLAR_WIDTH / 2);
 				RectF rectF = new RectF(
 						(float) (x1),
 						(float) (y1), 
@@ -802,30 +848,19 @@ public class LifeSurfaceView extends SurfaceView
 						);
 				
 				canvas.drawRoundRect(rectF, BACK_PILLAR_WIDTH / 2, BACK_PILLAR_WIDTH / 2, paint);
-//				canvas.drawCircle(
-//						(float) (i+BACK_PILLAR_WIDTH / 2 - BACK_PILLAR_SHADE_WIDTH_OFFSET), 
-//						(float) (BITMAP_HEIGHT - backPillarHeight + BACK_PILLAR_SHADE_HEIGHT_OFFSET), 
-//						BACK_PILLAR_WIDTH/2, 
-//						paint);
-//				
-//				canvas.drawRect(
-//						(float)(i - BACK_PILLAR_SHADE_WIDTH_OFFSET), 
-//						(float)(BITMAP_HEIGHT - backPillarHeight + BACK_PILLAR_SHADE_HEIGHT_OFFSET), 
-//						i+BACK_PILLAR_WIDTH, 
-//						BITMAP_HEIGHT, 
-//						paint);
 			}
 			else{
 				stageBackPillarShift = stage.getWidth() - i;
 			}
 			
-			i += rand.nextInt(5) + 5;
+			i += rand.nextInt((int) BACK_PILLAR_SPACE) + BACK_PILLAR_SPACE;
 		}
 		
 		/*
 		 * Draw back pillars
 		 */
 		paint.setAlpha(255);
+		paint.setAntiAlias(true);
 		for(PillarPosition pillarPosition : backPillarPositionList){
 			Random rand = new Random();
 			paint.setColor(backPillarColor[rand.nextInt(backPillarColor.length)]);
@@ -852,13 +887,12 @@ public class LifeSurfaceView extends SurfaceView
 			Random rand = new Random();
 			int pillarHeight = (int) ((BITMAP_HEIGHT* 0.5 * (PILLAR_HEIGHT_MIN + PILLAR_HEIGHT_MAX)) + 
 					rand.nextGaussian() * 0.3 *
-					(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX 
-							- BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
+					(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX - BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
 			paint.setColor(pillarColor[rand.nextInt(pillarColor.length)]);
 			
-			if(i+PILLAR_WIDTH <= stage.getWidth()  - stageBackPillarShift ){
+			if( i + PILLAR_WIDTH <= stage.getWidth() - stageBackPillarShift ){
 				canvas.drawCircle(
-						i+PILLAR_WIDTH/2, 
+						i + PILLAR_WIDTH/2, 
 						BITMAP_HEIGHT - pillarHeight, 
 						PILLAR_WIDTH/2, 
 						paint);
@@ -873,7 +907,7 @@ public class LifeSurfaceView extends SurfaceView
 				stagePillarShift = stage.getWidth() - i;
 			}
 			
-			i += rand.nextInt(5) + 5;
+			i += rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE;
 		}
 		
 		/*
@@ -885,26 +919,32 @@ public class LifeSurfaceView extends SurfaceView
 		Bitmap cloud1Bitmap = ((BitmapDrawable)cloud1Tile).getBitmap();
 		Bitmap cloud1ShadeBitmap = ((BitmapDrawable)cloud1ShadeTile).getBitmap();
 		
-		for(int i = 0; i< stage.getWidth(); i += CLOUD_WIDTH_MAX*1.2){
+		for(int i = 0; i< stage.getWidth(); i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO){
 			Random rand = new Random();
 			if(i + CLOUD_WIDTH_MIN*1.5 <= stage.getWidth()){
 				int cloudWidth = CLOUD_WIDTH_MIN + rand.nextInt(CLOUD_WIDTH_MAX - CLOUD_WIDTH_MIN);
 				int cloudHeight = (int) (BITMAP_HEIGHT * 
 						(1-(CLOUD_HEIGHT_MIN + rand.nextDouble()*(CLOUD_HEIGHT_MAX - CLOUD_HEIGHT_MIN))));
+				
 				int x1 = i;
 				int y1 = cloudHeight;
 				int x2 = x1 + cloudWidth;
 				int y2 = y1 + cloudWidth;
 				
 				RectF cloudRectF = new RectF(x1, y1, x2, y2);
-				RectF shadeRectF = new RectF(x1 - cloudWidth / 4, y1 + cloudWidth / 4,
-						x2 -cloudWidth / 4, y2 + cloudWidth / 4);
+				RectF shadeRectF = new RectF(
+						(float)(x1 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
+						(float)(y1 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO),
+						(float)(x2 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
+						(float)(y2 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO)
+						);
+				
 				Paint shadePaint = new Paint();
-				shadePaint.setAlpha(60);
+				shadePaint.setAlpha(CLOUD_SHADE_ALPHA);
 				canvas.drawBitmap(cloud1ShadeBitmap, null, shadeRectF, shadePaint);
 				canvas.drawBitmap(cloud1Bitmap, null, cloudRectF, null);
 				
-				i += CLOUD_WIDTH_MIN * 1.5 * rand.nextDouble();
+				i += CLOUD_WIDTH_MIN * CLOUD_SPACE_RATIO * rand.nextDouble();
 			}
 		}
 		
@@ -920,7 +960,7 @@ public class LifeSurfaceView extends SurfaceView
 		for(int i = (int) (start + BUSH_WIDTH); i < stage.getWidth() - BUSH_WIDTH * BUSH_SPACE_COUNT; i++){
 			Random rand = new Random();
 			Paint bushShadePaint = new Paint();
-			bushShadePaint.setAlpha(60);
+			bushShadePaint.setAlpha(BUSH_SHADE_ALPHA);
 			Drawable bushDrawable = context.getResources().getDrawable(R.drawable.bush);
 			Bitmap bushBitmap = ((BitmapDrawable)bushDrawable).getBitmap();
 			
@@ -936,8 +976,8 @@ public class LifeSurfaceView extends SurfaceView
 			double lBushY2 = lBushY1 + lBushHeight;
 			
 			RectF lBushShadeRectF = new RectF(
-					(float)(lBushX1 - BUSH_WIDTH / 4),
-					(float)(lBushY1 + lBushHeight / 4),
+					(float)(lBushX1 - BUSH_WIDTH * BUSH_SHADE_HEIGHT_OFFSET_RATIO),
+					(float)(lBushY1 + lBushHeight * BUSH_SHADE_WIDTH_OFFSET_RATIO),
 					(float)(lBushX2),
 					(float)(lBushY2)
 					);
@@ -956,8 +996,8 @@ public class LifeSurfaceView extends SurfaceView
 			double rBushY2 = rBushY1 + rBushHeight;
 			
 			RectF rBushShadeRectF = new RectF(
-					(float)(rBushX1 - BUSH_WIDTH / 4),
-					(float)(rBushY1 + rBushHeight / 4),
+					(float)(rBushX1 - BUSH_WIDTH * BUSH_SHADE_WIDTH_OFFSET_RATIO),
+					(float)(rBushY1 + rBushHeight * BUSH_SHADE_WIDTH_OFFSET_RATIO),
 					(float)(rBushX2),
 					(float)(rBushY2)
 					);
@@ -975,8 +1015,8 @@ public class LifeSurfaceView extends SurfaceView
 			double mBushY2 = mBushY1 + mBushHeight;
 			
 			RectF mBushShadeRectF = new RectF(
-					(float)(mBushX1 - BUSH_WIDTH / 4),
-					(float)(mBushY1 + mBushHeight / 4),
+					(float)(mBushX1 - BUSH_WIDTH * BUSH_SHADE_WIDTH_OFFSET_RATIO),
+					(float)(mBushY1 + mBushHeight * BUSH_SHADE_WIDTH_OFFSET_RATIO),
 					(float)(mBushX2),
 					(float)(mBushY2)
 					);
@@ -1042,7 +1082,6 @@ public class LifeSurfaceView extends SurfaceView
 
 			float rootHeight = (float) (rootHeightMax + rand.nextDouble()*(rootHeightMin - rootHeightMax));
 			
-			
 			/*
 			 * Draw trunk
 			 */
@@ -1052,8 +1091,11 @@ public class LifeSurfaceView extends SurfaceView
 			double trunkY1 = rootHeight - TRUNK_HEIGHT;
 			double trunkX2 = i + TREE_CROWN_WIDTH / 2 + TRUNK_WIDTH / 2;
 			double trunkY2 = rootHeight;
-			RectF trunkRectF = new RectF((float)(trunkX1),(float)(trunkY1),
-					(float)(trunkX2),(float)(trunkY2));
+			RectF trunkRectF = new RectF(
+					(float)(trunkX1),
+					(float)(trunkY1),
+					(float)(trunkX2),
+					(float)(trunkY2));
 			canvas.drawRect(trunkRectF, trunkPaint);
 			
 			/*
@@ -1076,7 +1118,7 @@ public class LifeSurfaceView extends SurfaceView
 					trunkShadePaint);
 			
 			double trunkShadeOnWallX1 = trunkShadeX1;
-			double trunkShadeOnWallY1 = trunkShadeY1 - TREE_CROWN_HEIGHT / 3;
+			double trunkShadeOnWallY1 = trunkShadeY1 - TREE_CROWN_HEIGHT * TREE_CROWN_SHADE_HEIGHT_OFFSET_RATIO;
 			double trunkShadeOnWallX2 = trunkShadeX1;
 			double trunkShadeOnWallY2 = rootHeightMax;
 			canvas.drawLine(

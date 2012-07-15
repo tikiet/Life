@@ -4,23 +4,44 @@
     <string name="hello">Hello World, LifeActivity!</string>
     <string name="app_name">Life</string>
 	<string name="block_side_length">32</string>
+	
+	<string name="brick_height">32</string>
+	<string name="brick_width">32</string>
+	<string name="brown_brick_threshold">0.75</string>
+	<string name="brick_shade_height_offset_ratio">0.5</string>
+	<string name="brick_shade_width_offset_ratio">0.5</string>
+	
+	<string name="hero_height">96</string>
+	<string name="hero_width">50</string>
+	<string name="hero_shade_height_offset_ratio">0.5</string>
+	<string name="hero_shade_width_offset_ratio">0.5</string>
+	
 	<string name="pillar_width">90</string>
 	<string name="pillar_height_max">0.67</string>
 	<string name="pillar_height_min">0.40</string>
+	<string name="pillar_space">5</string>
+	
 	<string name="back_pillar_width">90</string>
 	<string name="back_pillar_height_max">0.75</string>
 	<string name="back_pillar_height_min">0.50</string>
-	<string name="hero_height">96</string>
-	<string name="hero_width">50</string>
+	<string name="back_pillar_shade_height_ratio">0.16</string>
+	<string name="back_pillar_shade_width_ratio">0.33</string>
+	<string name="back_pillar_space">5</string>
+	
 	<string name="cloud_height_max">0.9</string>
 	<string name="cloud_height_min">0.5</string>
 	<string name="cloud_width_max">80</string>
 	<string name="cloud_width_min">70</string>
+	<string name="cloud_space_ratio">1.5</string>
+	<string name="cloud_shade_height_offset_ratio">0.25</string>
+	<string name="cloud_shade_width_offset_ratio">0.25</string>
+	
 	<string name="random_brick_height_max">0.6</string>
 	<string name="random_brick_height_min">0.07</string>
 	<string name="random_brick_count_max">4</string>
 	<string name="random_brick_count_min">2</string>
 	<string name="random_brick_threshold">0.3</string>
+	
 	<string name="ground_ratio">0.0286</string>
 	<string name="ground_section_ratio">0.011</string>
 	<string name="subterranean_ratio">0.009</string>
@@ -33,11 +54,14 @@
 	<string name="trunk_width_ratio">0.00619</string>
 	<string name="tree_space_count">6</string>
 	<string name="tree_shade_angle">30</string>
+	<string name="tree_crown_shade_height_offset_ratio">0.33</string>
 	
 	<string name="bush_width_ratio">0.0291</string>
 	<string name="bush_height_min_ratio">0.0319</string>
 	<string name="bush_height_max_ratio">0.04619</string>
 	<string name="bush_height_offset_from_wall_ratio">0.00333</string>
 	<string name="bush_height_offset_from_bush_ratio">0.0014286</string>
+	<string name="bush_shade_height_offset_ratio">0.25</string>
+	<string name="bush_shade_width_offset_ratio">0.25</string>
 	<string name="bush_space_count">6</string>
 </resources>
