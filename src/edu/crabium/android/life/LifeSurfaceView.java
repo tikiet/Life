@@ -315,44 +315,8 @@ public class LifeSurfaceView extends SurfaceView
 				
 				drawPillar(canvas, BITMAP_WIDTH + PILLAR_WIDTH - stagePillarShift);
 				
+				drawCloudAndShade(canvas, BITMAP_WIDTH + PILLAR_WIDTH);
 				
-				/*
-				 * Draw clouds
-				 */
-				Drawable cloud1Tile = context.getResources().getDrawable(R.drawable.cloud1);
-				Drawable cloud1ShadeTile = context.getResources().getDrawable(R.drawable.cloud1_shade);
-				
-				Bitmap cloud1Bitmap = ((BitmapDrawable)cloud1Tile).getBitmap();
-				Bitmap cloud1ShadeBitmap = ((BitmapDrawable)cloud1ShadeTile).getBitmap();
-				
-				for(int i = BITMAP_WIDTH + PILLAR_WIDTH; i< stage.getWidth(); i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO ){
-					Random rand = new Random();
-					if(i + CLOUD_WIDTH_MIN * 1.5 <= stage.getWidth()){
-						int cloudWidth = CLOUD_WIDTH_MIN + rand.nextInt(CLOUD_WIDTH_MAX - CLOUD_WIDTH_MIN);
-						int cloudHeight = (int) (BITMAP_HEIGHT * 
-								(1-(CLOUD_HEIGHT_MIN + rand.nextDouble()*(CLOUD_HEIGHT_MAX - CLOUD_HEIGHT_MIN))));
-						
-						int x1 = i;
-						int y1 = cloudHeight;
-						int x2 = x1 + cloudWidth;
-						int y2 = y1 + cloudWidth;
-						
-						RectF cloudRectF = new RectF(x1, y1, x2, y2);
-						RectF shadeRectF = new RectF(
-								(float)(x1 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
-								(float)(y1 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO),
-								(float)(x2 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
-								(float)(y2 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO)
-								);
-						
-						Paint shadePaint = new Paint();
-						shadePaint.setAlpha(CLOUD_SHADE_ALPHA);
-						canvas.drawBitmap(cloud1ShadeBitmap, null, shadeRectF, shadePaint);
-						canvas.drawBitmap(cloud1Bitmap, null, cloudRectF, null);
-						
-						i += CLOUD_WIDTH_MIN * CLOUD_SPACE_RATIO * rand.nextDouble();
-					}
-				}
 				
 				int newRandomBricksStartX = 0;
 				Brick[][] newBlockArray = new Brick[blockArray.length][blockArray[0].length];
@@ -536,6 +500,17 @@ public class LifeSurfaceView extends SurfaceView
 		
 		drawPillar(canvas, 0);
 		
+		drawCloudAndShade(canvas, 0);
+		
+		drawGroundAndSubterranean(canvas, 0);
+		drawGrass(canvas, 0);
+		drawBush(canvas, 0);
+		drawTree(canvas, 0);
+		
+		thread.start();
+	}
+
+	private void drawCloudAndShade(Canvas canvas, int start) {
 		/*
 		 * Draw clouds
 		 */
@@ -545,7 +520,7 @@ public class LifeSurfaceView extends SurfaceView
 		Bitmap cloud1Bitmap = ((BitmapDrawable)cloud1Tile).getBitmap();
 		Bitmap cloud1ShadeBitmap = ((BitmapDrawable)cloud1ShadeTile).getBitmap();
 		
-		for(int i = 0; i< stage.getWidth(); i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO){
+		for(int i = start; i< stage.getWidth(); i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO){
 			Random rand = new Random();
 			if(i + CLOUD_WIDTH_MIN*1.5 <= stage.getWidth()){
 				int cloudWidth = CLOUD_WIDTH_MIN + rand.nextInt(CLOUD_WIDTH_MAX - CLOUD_WIDTH_MIN);
@@ -573,13 +548,6 @@ public class LifeSurfaceView extends SurfaceView
 				i += CLOUD_WIDTH_MIN * CLOUD_SPACE_RATIO * rand.nextDouble();
 			}
 		}
-		
-		drawGroundAndSubterranean(canvas, 0);
-		drawGrass(canvas, 0);
-		drawBush(canvas, 0);
-		drawTree(canvas, 0);
-		
-		thread.start();
 	}
 
 	private void drawPillar(Canvas canvas, int start) {
