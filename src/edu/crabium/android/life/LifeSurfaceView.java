@@ -153,134 +153,12 @@ public class LifeSurfaceView extends SurfaceView
 	
 	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
-			
-			BLOCK_SIDE_LENGTH = Integer.valueOf( 
-					context.getResources().
-							getString(R.string.block_side_length));
-			
-			BRICK_HEIGHT = Integer.valueOf( 
-					context.getResources().
-					getString(R.string.brick_height));
-			BRICK_WIDTH = Integer.valueOf( 
-					context.getResources().
-					getString(R.string.brick_width));
-
-			BROWN_BRICK_THRESHOLD = Double.valueOf(
-					context.getResources().
-							getString(R.string.brown_brick_threshold));
-			
-			PILLAR_WIDTH = Integer.valueOf(
-					context.getResources().
-							getString(R.string.pillar_width));
-			
-			PILLAR_HEIGHT_MAX = Double.valueOf(
-					context.getResources().
-							getString(R.string.pillar_height_max));
-			
-			PILLAR_HEIGHT_MIN = Double.valueOf(
-					context.getResources().
-							getString(R.string.pillar_height_min));
-			
-			PILLAR_SPACE = Integer.valueOf(
-					context.getResources().
-							getString(R.string.pillar_space));
-			
-			BACK_PILLAR_WIDTH = Integer.valueOf(
-					context.getResources().
-							getString(R.string.back_pillar_width));
-			
-			BACK_PILLAR_SPACE = Integer.valueOf(
-					context.getResources().
-							getString(R.string.back_pillar_space));
-			
-			BACK_PILLAR_HEIGHT_MAX = Double.valueOf(
-					context.getResources().
-							getString(R.string.back_pillar_height_max));
-			BACK_PILLAR_HEIGHT_MIN = Double.valueOf(
-					context.getResources().
-							getString(R.string.back_pillar_height_min));
-			
-			BACK_PILLAR_SHADE_WIDTH_OFFSET = BACK_PILLAR_WIDTH * Double.valueOf(
-					context.getResources().
-					getString(R.string.back_pillar_shade_width_ratio));
-			
-			BACK_PILLAR_SHADE_HEIGHT_OFFSET = BACK_PILLAR_WIDTH * Double.valueOf(
-					context.getResources().
-					getString(R.string.back_pillar_shade_height_ratio));
-			
-			HERO_HEIGHT = Integer.valueOf(
-					context.getResources().
-							getString(R.string.hero_height));
-			HERO_WIDTH = Integer.valueOf(
-					context.getResources().
-							getString(R.string.hero_width));
-			
-			HERO_SHADE_HEIGHT_OFFSET = HERO_HEIGHT * Double.valueOf(
-					context.getResources().
-					getString(R.string.hero_shade_height_offset_ratio));
-			
-			HERO_SHADE_WIDTH_OFFSET = HERO_WIDTH * Double.valueOf(
-					context.getResources().
-					getString(R.string.hero_shade_width_offset_ratio));
-			
-			CLOUD_HEIGHT_MAX = Double.valueOf(
-					context.getResources().
-							getString(R.string.cloud_height_max));
-			CLOUD_HEIGHT_MIN = Double.valueOf(
-					context.getResources().
-							getString(R.string.cloud_height_min));
-			CLOUD_WIDTH_MAX = Integer.valueOf(
-					context.getResources().
-							getString(R.string.cloud_width_max));
-			CLOUD_WIDTH_MIN = Integer.valueOf(
-					context.getResources().
-							getString(R.string.cloud_width_min));
-			CLOUD_SPACE_RATIO = Double.valueOf(
-					context.getResources().
-							getString(R.string.cloud_space_ratio));
-			
-			CLOUD_SHADE_HEIGHT_OFFSET_RATIO = Double.valueOf(
-					context.getResources().
-					getString(R.string.cloud_shade_height_offset_ratio));
-			
-			CLOUD_SHADE_WIDTH_OFFSET_RATIO = Double.valueOf(
-					context.getResources().
-					getString(R.string.cloud_shade_width_offset_ratio));
-			
-			BUSH_SHADE_HEIGHT_OFFSET_RATIO = Double.valueOf(
-					context.getResources().
-					getString(R.string.bush_shade_height_offset_ratio));
-			
-			BUSH_SHADE_WIDTH_OFFSET_RATIO = Double.valueOf(
-					context.getResources().
-					getString(R.string.bush_shade_width_offset_ratio));
-			
-			RANDOM_BRICK_HEIGHT_MAX = Double.valueOf(
-					context.getResources().
-							getString(R.string.random_brick_height_max));
-			RANDOM_BRICK_HEIGHT_MIN = Double.valueOf(
-					context.getResources().
-							getString(R.string.random_brick_height_min));
-			RANDOM_BRICK_COUNT_MAX = Integer.valueOf(
-					context.getResources().
-							getString(R.string.random_brick_count_max));
-			RANDOM_BRICK_COUNT_MIN = Integer.valueOf(
-					context.getResources().
-							getString(R.string.random_brick_count_min));
-			
-			RANDOM_BRICK_THRESHOLD = Double.valueOf(
-					context.getResources().
-							getString(R.string.random_brick_threshold));
-			
-			heroPositionX *= BLOCK_SIDE_LENGTH;
-			heroPositionY *= BLOCK_SIDE_LENGTH;
 		}
 		
 		int startx = 0;
 		public void run(){
 			while(true){
 				Drawable yellowTile = context.getResources().getDrawable(R.drawable.tile_yellow);
-			
 				Drawable brownTile = context.getResources().getDrawable(R.drawable.tile_brown);
 				Drawable shadeTile = context.getResources().getDrawable(R.drawable.shade);
 				Drawable heroTile = context.getResources().getDrawable(R.drawable.hero);
@@ -374,6 +252,7 @@ public class LifeSurfaceView extends SurfaceView
 							}
 						}
 					}
+					
 					Rect rSrc = new Rect(
 							startx,
 							0,
@@ -432,65 +311,7 @@ public class LifeSurfaceView extends SurfaceView
 						(float)BITMAP_HEIGHT, 
 						backGroundPaint);
 				
-				/*
-				 * Draw back pillars' shade
-				 */
-				Paint backPillarShadePaint = new Paint();
-				backPillarShadePaint.setColor(Color.BLACK);
-				backPillarShadePaint.setAlpha(BACK_PILLAR_SHADE_ALPHA);
-				backPillarShadePaint.setAntiAlias(true);
-				
-				List<PillarPosition> backPillarPositionList = new LinkedList<PillarPosition>();
-				for(int i = BITMAP_WIDTH + BACK_PILLAR_WIDTH - stageBackPillarShift ; i < stage.getWidth(); i += BACK_PILLAR_WIDTH){
-					Random rand = new Random();
-					int backPillarHeight = (int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN) + 
-							rand.nextInt(
-							(int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MAX 
-									- BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN));
-					
-					if( i + BACK_PILLAR_WIDTH <= stage.getWidth()){
-						backPillarPositionList.add(new PillarPosition(i, backPillarHeight));
-						
-						double x1 = i - BACK_PILLAR_SHADE_WIDTH_OFFSET;
-						double y1 = BITMAP_HEIGHT - (backPillarHeight - BACK_PILLAR_SHADE_HEIGHT_OFFSET + BACK_PILLAR_WIDTH / 2);
-						RectF rectF = new RectF(
-								(float) (x1),
-								(float) (y1), 
-								(float)(x1 + BACK_PILLAR_WIDTH),
-								(float)BITMAP_HEIGHT
-								);
-						
-						canvas.drawRoundRect(rectF, BACK_PILLAR_WIDTH / 2, BACK_PILLAR_WIDTH / 2, backPillarShadePaint);
-					}
-					else{
-						stageBackPillarShift = stage.getWidth() - i;
-					}
-					
-					i += rand.nextInt((int) BACK_PILLAR_SPACE) + BACK_PILLAR_SPACE;
-				}
-				
-				/*
-				 * Draw back pillars
-				 */
-				Paint backPillarPaint = new Paint();
-				backPillarPaint.setAlpha(255);
-				backPillarPaint.setAntiAlias(true);
-				for(PillarPosition pillarPosition : backPillarPositionList){
-					Random rand = new Random();
-					backPillarPaint.setColor(backPillarColor[rand.nextInt(backPillarColor.length)]);
-					
-						canvas.drawCircle(
-								(float)(pillarPosition.getX() + BACK_PILLAR_WIDTH / 2), 
-								(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
-								BACK_PILLAR_WIDTH / 2, 
-								backPillarPaint);
-						canvas.drawRect(
-								(float)(pillarPosition.getX()), 
-								(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
-								(float) (pillarPosition.getX()+BACK_PILLAR_WIDTH), 
-								BITMAP_HEIGHT, 
-								backPillarPaint);
-				}
+				drawBackPillarAndShade(canvas, BITMAP_WIDTH + BACK_PILLAR_WIDTH - stageBackPillarShift);
 				
 				/* 
 				 * Draw pillars
@@ -691,6 +512,318 @@ public class LifeSurfaceView extends SurfaceView
 		BITMAP_HEIGHT = canvas.getHeight();
 		holder.unlockCanvasAndPost(canvas);
 		
+		initializeContant(context);
+		
+		blockArray = new Brick[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
+		for(int i = 0; i < blockArray.length; i++)
+			for(int j= 0; j < blockArray[i].length; j++)
+				blockArray[i][j] = Brick.NONE;
+		
+		boolean randomBrickOn = false;
+		int randomBricksRemain = 0;
+		for(int i = 0; i < blockArray.length - RANDOM_BRICK_COUNT_MAX; i++){
+			Random rand = new Random();
+			if(randomBrickOn){
+				randomBricksRemain = RANDOM_BRICK_COUNT_MIN + 
+						rand.nextInt( RANDOM_BRICK_COUNT_MAX - RANDOM_BRICK_COUNT_MIN );
+				
+				
+				int randomBrickHeight = BITMAP_HEIGHT - (int) (RANDOM_BRICK_HEIGHT_MIN*BITMAP_HEIGHT +
+						rand.nextInt((int)(RANDOM_BRICK_HEIGHT_MAX * BITMAP_HEIGHT - 
+								RANDOM_BRICK_HEIGHT_MIN* BITMAP_HEIGHT))) ;
+				int randomBrickBlockHeight = randomBrickHeight / BLOCK_SIDE_LENGTH;
+				
+				String brickPattern = Integer.toBinaryString((1 << rand.nextInt(randomBricksRemain)) + (1 << (randomBricksRemain))) + "0";
+				brickPattern = brickPattern.substring(1);
+				Log.d("Life", "brickPattern:"+brickPattern);
+				
+				for(int j = 0; j < randomBricksRemain; j++){
+					blockArray[i + j][randomBrickBlockHeight] = 
+							Integer.valueOf(brickPattern.substring(j,j+1)) == 1 ? Brick.BROWN : Brick.YELLOW;
+				}
+				
+				randomBrickOn = false;
+				i+= randomBricksRemain / 2;
+			}else{
+				if(rand.nextDouble() >= RANDOM_BRICK_THRESHOLD){
+					randomBrickOn = true;
+				}
+			}
+		}
+			
+		canvas = new Canvas(stage);
+		Paint backGroundPaint = new Paint();
+		backGroundPaint.setColor(BACK_GROUND_COLOR);
+		canvas.drawRect(
+				(float)0.0, 
+				(float)0.0, 
+				(float)BITMAP_WIDTH*3 + PILLAR_WIDTH, 
+				(float)BITMAP_HEIGHT, 
+				backGroundPaint);
+		
+		drawBackPillarAndShade(canvas, BACK_PILLAR_WIDTH /2);
+		
+		/*
+		 * Draw pillars
+		 */
+		Paint pillarPaint = new Paint();
+		pillarPaint.setAntiAlias(true);
+		for(int i = 0; i < stage.getWidth() - stageBackPillarShift; i += PILLAR_WIDTH){
+			Random rand = new Random();
+			int pillarHeight = (int) ((BITMAP_HEIGHT* 0.5 * (PILLAR_HEIGHT_MIN + PILLAR_HEIGHT_MAX)) + 
+					rand.nextGaussian() * 0.3 *
+					(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX - BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
+			pillarPaint.setColor(pillarColor[rand.nextInt(pillarColor.length)]);
+			
+			if( i + PILLAR_WIDTH <= stage.getWidth() - stageBackPillarShift ){
+				canvas.drawCircle(
+						i + PILLAR_WIDTH/2, 
+						BITMAP_HEIGHT - pillarHeight, 
+						PILLAR_WIDTH/2, 
+						pillarPaint);
+				canvas.drawRect(
+						i, 
+						BITMAP_HEIGHT - pillarHeight, 
+						i+PILLAR_WIDTH, 
+						BITMAP_HEIGHT, 
+						pillarPaint);
+			}
+			else{
+				stagePillarShift = stage.getWidth() - i;
+			}
+			
+			i += rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE;
+		}
+		
+		/*
+		 * Draw clouds
+		 */
+		Drawable cloud1Tile = context.getResources().getDrawable(R.drawable.cloud1);
+		Drawable cloud1ShadeTile = context.getResources().getDrawable(R.drawable.cloud1_shade);
+
+		Bitmap cloud1Bitmap = ((BitmapDrawable)cloud1Tile).getBitmap();
+		Bitmap cloud1ShadeBitmap = ((BitmapDrawable)cloud1ShadeTile).getBitmap();
+		
+		for(int i = 0; i< stage.getWidth(); i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO){
+			Random rand = new Random();
+			if(i + CLOUD_WIDTH_MIN*1.5 <= stage.getWidth()){
+				int cloudWidth = CLOUD_WIDTH_MIN + rand.nextInt(CLOUD_WIDTH_MAX - CLOUD_WIDTH_MIN);
+				int cloudHeight = (int) (BITMAP_HEIGHT * 
+						(1-(CLOUD_HEIGHT_MIN + rand.nextDouble()*(CLOUD_HEIGHT_MAX - CLOUD_HEIGHT_MIN))));
+				
+				int x1 = i;
+				int y1 = cloudHeight;
+				int x2 = x1 + cloudWidth;
+				int y2 = y1 + cloudWidth;
+				
+				RectF cloudRectF = new RectF(x1, y1, x2, y2);
+				RectF shadeRectF = new RectF(
+						(float)(x1 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
+						(float)(y1 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO),
+						(float)(x2 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
+						(float)(y2 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO)
+						);
+				
+				Paint shadePaint = new Paint();
+				shadePaint.setAlpha(CLOUD_SHADE_ALPHA);
+				canvas.drawBitmap(cloud1ShadeBitmap, null, shadeRectF, shadePaint);
+				canvas.drawBitmap(cloud1Bitmap, null, cloudRectF, null);
+				
+				i += CLOUD_WIDTH_MIN * CLOUD_SPACE_RATIO * rand.nextDouble();
+			}
+		}
+		
+		drawGroundAndSubterranean(canvas, 0);
+		drawGrass(canvas, 0);
+		drawBush(canvas, 0);
+		drawTree(canvas, 0);
+		
+		thread.start();
+	}
+
+	private void drawBackPillarAndShade(Canvas canvas, int start) {
+		/*
+		 * Draw back pillars' shade
+		 */
+		Paint backPillarShadePaint = new Paint();
+		backPillarShadePaint.setAntiAlias(true);
+		backPillarShadePaint.setColor(Color.BLACK);
+		backPillarShadePaint.setAlpha(BACK_PILLAR_SHADE_ALPHA);
+		
+		List<PillarPosition> backPillarPositionList = new LinkedList<PillarPosition>();
+		for(int i = start ; i < stage.getWidth(); i += BACK_PILLAR_WIDTH){
+			Random rand = new Random();
+			int backPillarHeight = (int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN) + 
+					rand.nextInt(
+					(int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MAX 
+							- BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN));
+			
+			if( i + BACK_PILLAR_WIDTH <= stage.getWidth()){
+				backPillarPositionList.add(new PillarPosition(i, backPillarHeight));
+				
+				double x1 = i - BACK_PILLAR_SHADE_WIDTH_OFFSET;
+				double y1 = BITMAP_HEIGHT - (backPillarHeight - BACK_PILLAR_SHADE_HEIGHT_OFFSET + BACK_PILLAR_WIDTH / 2);
+				RectF rectF = new RectF(
+						(float) (x1),
+						(float) (y1), 
+						(float)(x1 + BACK_PILLAR_WIDTH),
+						(float)BITMAP_HEIGHT
+						);
+				
+				canvas.drawRoundRect(rectF, BACK_PILLAR_WIDTH / 2, BACK_PILLAR_WIDTH / 2, backPillarShadePaint);
+			}
+			else{
+				stageBackPillarShift = stage.getWidth() - i;
+			}
+			
+			i += rand.nextInt((int) BACK_PILLAR_SPACE) + BACK_PILLAR_SPACE;
+		}
+		
+		/*
+		 * Draw back pillars
+		 */
+		Paint backPillarPaint = new Paint();
+		backPillarPaint.setAlpha(255);
+		backPillarPaint.setAntiAlias(true);
+		for(PillarPosition pillarPosition : backPillarPositionList){
+			Random rand = new Random();
+			backPillarPaint.setColor(backPillarColor[rand.nextInt(backPillarColor.length)]);
+			
+				canvas.drawCircle(
+						(float)(pillarPosition.getX()+BACK_PILLAR_WIDTH/2), 
+						(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
+						BACK_PILLAR_WIDTH/2, 
+						backPillarPaint);
+				canvas.drawRect(
+						(float)(pillarPosition.getX()), 
+						(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
+						(float) (pillarPosition.getX()+BACK_PILLAR_WIDTH), 
+						BITMAP_HEIGHT, 
+						backPillarPaint);
+		}
+	}
+	
+	private void initializeContant(Context context){BLOCK_SIDE_LENGTH = Integer.valueOf( 
+		context.getResources().
+		getString(R.string.block_side_length));
+
+		BRICK_HEIGHT = Integer.valueOf( 
+			context.getResources().
+			getString(R.string.brick_height));
+		BRICK_WIDTH = Integer.valueOf( 
+			context.getResources().
+			getString(R.string.brick_width));
+		
+		BROWN_BRICK_THRESHOLD = Double.valueOf(
+			context.getResources().
+					getString(R.string.brown_brick_threshold));
+		
+		PILLAR_WIDTH = Integer.valueOf(
+			context.getResources().
+					getString(R.string.pillar_width));
+		
+		PILLAR_HEIGHT_MAX = Double.valueOf(
+			context.getResources().
+					getString(R.string.pillar_height_max));
+		
+		PILLAR_HEIGHT_MIN = Double.valueOf(
+			context.getResources().
+					getString(R.string.pillar_height_min));
+		
+		PILLAR_SPACE = Integer.valueOf(
+			context.getResources().
+					getString(R.string.pillar_space));
+		
+		BACK_PILLAR_WIDTH = Integer.valueOf(
+			context.getResources().
+					getString(R.string.back_pillar_width));
+		
+		BACK_PILLAR_SPACE = Integer.valueOf(
+			context.getResources().
+					getString(R.string.back_pillar_space));
+		
+		BACK_PILLAR_HEIGHT_MAX = Double.valueOf(
+			context.getResources().
+					getString(R.string.back_pillar_height_max));
+		BACK_PILLAR_HEIGHT_MIN = Double.valueOf(
+			context.getResources().
+					getString(R.string.back_pillar_height_min));
+		
+		BACK_PILLAR_SHADE_WIDTH_OFFSET = BACK_PILLAR_WIDTH * Double.valueOf(
+			context.getResources().
+			getString(R.string.back_pillar_shade_width_ratio));
+		
+		BACK_PILLAR_SHADE_HEIGHT_OFFSET = BACK_PILLAR_WIDTH * Double.valueOf(
+			context.getResources().
+			getString(R.string.back_pillar_shade_height_ratio));
+		
+		HERO_HEIGHT = Integer.valueOf(
+			context.getResources().
+					getString(R.string.hero_height));
+		HERO_WIDTH = Integer.valueOf(
+			context.getResources().
+					getString(R.string.hero_width));
+		
+		HERO_SHADE_HEIGHT_OFFSET = HERO_HEIGHT * Double.valueOf(
+			context.getResources().
+			getString(R.string.hero_shade_height_offset_ratio));
+		
+		HERO_SHADE_WIDTH_OFFSET = HERO_WIDTH * Double.valueOf(
+			context.getResources().
+			getString(R.string.hero_shade_width_offset_ratio));
+		
+		CLOUD_HEIGHT_MAX = Double.valueOf(
+			context.getResources().
+					getString(R.string.cloud_height_max));
+		CLOUD_HEIGHT_MIN = Double.valueOf(
+			context.getResources().
+					getString(R.string.cloud_height_min));
+		CLOUD_WIDTH_MAX = Integer.valueOf(
+			context.getResources().
+					getString(R.string.cloud_width_max));
+		CLOUD_WIDTH_MIN = Integer.valueOf(
+			context.getResources().
+					getString(R.string.cloud_width_min));
+		CLOUD_SPACE_RATIO = Double.valueOf(
+			context.getResources().
+					getString(R.string.cloud_space_ratio));
+		
+		CLOUD_SHADE_HEIGHT_OFFSET_RATIO = Double.valueOf(
+			context.getResources().
+			getString(R.string.cloud_shade_height_offset_ratio));
+		
+		CLOUD_SHADE_WIDTH_OFFSET_RATIO = Double.valueOf(
+			context.getResources().
+			getString(R.string.cloud_shade_width_offset_ratio));
+		
+		BUSH_SHADE_HEIGHT_OFFSET_RATIO = Double.valueOf(
+			context.getResources().
+			getString(R.string.bush_shade_height_offset_ratio));
+		
+		BUSH_SHADE_WIDTH_OFFSET_RATIO = Double.valueOf(
+			context.getResources().
+			getString(R.string.bush_shade_width_offset_ratio));
+		
+		RANDOM_BRICK_HEIGHT_MAX = Double.valueOf(
+			context.getResources().
+					getString(R.string.random_brick_height_max));
+		RANDOM_BRICK_HEIGHT_MIN = Double.valueOf(
+			context.getResources().
+					getString(R.string.random_brick_height_min));
+		RANDOM_BRICK_COUNT_MAX = Integer.valueOf(
+			context.getResources().
+					getString(R.string.random_brick_count_max));
+		RANDOM_BRICK_COUNT_MIN = Integer.valueOf(
+			context.getResources().
+					getString(R.string.random_brick_count_min));
+		
+		RANDOM_BRICK_THRESHOLD = Double.valueOf(
+			context.getResources().
+					getString(R.string.random_brick_threshold));
+		
+		heroPositionX *= BLOCK_SIDE_LENGTH;
+		heroPositionY *= BLOCK_SIDE_LENGTH;
+		
 		GROUND_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
 						getString(R.string.ground_ratio));
@@ -788,191 +921,6 @@ public class LifeSurfaceView extends SurfaceView
 		
 		BLOCK_NUMBER_X = (BITMAP_WIDTH * 3 + PILLAR_WIDTH) / BLOCK_SIDE_LENGTH;
 		BLOCK_NUMBER_Y = BITMAP_HEIGHT / BLOCK_SIDE_LENGTH;
-		
-		blockArray = new Brick[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
-		for(int i = 0; i < blockArray.length; i++)
-			for(int j= 0; j < blockArray[i].length; j++)
-				blockArray[i][j] = Brick.NONE;
-		
-		boolean randomBrickOn = false;
-		int randomBricksRemain = 0;
-		for(int i = 0; i < blockArray.length - RANDOM_BRICK_COUNT_MAX; i++){
-			Random rand = new Random();
-			if(randomBrickOn){
-				randomBricksRemain = RANDOM_BRICK_COUNT_MIN + 
-						rand.nextInt( RANDOM_BRICK_COUNT_MAX - RANDOM_BRICK_COUNT_MIN );
-				
-				
-				int randomBrickHeight = BITMAP_HEIGHT - (int) (RANDOM_BRICK_HEIGHT_MIN*BITMAP_HEIGHT +
-						rand.nextInt((int)(RANDOM_BRICK_HEIGHT_MAX * BITMAP_HEIGHT - 
-								RANDOM_BRICK_HEIGHT_MIN* BITMAP_HEIGHT))) ;
-				int randomBrickBlockHeight = randomBrickHeight / BLOCK_SIDE_LENGTH;
-				
-				String brickPattern = Integer.toBinaryString((1 << rand.nextInt(randomBricksRemain)) + (1 << (randomBricksRemain))) + "0";
-				brickPattern = brickPattern.substring(1);
-				Log.d("Life", "brickPattern:"+brickPattern);
-				
-				for(int j = 0; j < randomBricksRemain; j++){
-					blockArray[i + j][randomBrickBlockHeight] = 
-							Integer.valueOf(brickPattern.substring(j,j+1)) == 1 ? Brick.BROWN : Brick.YELLOW;
-				}
-				
-				randomBrickOn = false;
-				i+= randomBricksRemain / 2;
-			}else{
-				if(rand.nextDouble() >= RANDOM_BRICK_THRESHOLD){
-					randomBrickOn = true;
-				}
-			}
-		}
-			
-		canvas = new Canvas(stage);
-		Paint backGroundPaint = new Paint();
-		backGroundPaint.setColor(BACK_GROUND_COLOR);
-		canvas.drawRect(
-				(float)0.0, 
-				(float)0.0, 
-				(float)BITMAP_WIDTH*3 + PILLAR_WIDTH, 
-				(float)BITMAP_HEIGHT, 
-				backGroundPaint);
-		
-		/*
-		 * Draw back pillars' shade
-		 */
-		Paint backPillarShadePaint = new Paint();
-		backPillarShadePaint.setAntiAlias(true);
-		backPillarShadePaint.setColor(Color.BLACK);
-		backPillarShadePaint.setAlpha(BACK_PILLAR_SHADE_ALPHA);
-		
-		List<PillarPosition> backPillarPositionList = new LinkedList<PillarPosition>();
-		for(int i = BACK_PILLAR_WIDTH /2 ; i < stage.getWidth(); i += BACK_PILLAR_WIDTH){
-			Random rand = new Random();
-			int backPillarHeight = (int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN) + 
-					rand.nextInt(
-					(int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MAX 
-							- BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN));
-			
-			if( i + BACK_PILLAR_WIDTH <= stage.getWidth()){
-				backPillarPositionList.add(new PillarPosition(i, backPillarHeight));
-				
-				double x1 = i - BACK_PILLAR_SHADE_WIDTH_OFFSET;
-				double y1 = BITMAP_HEIGHT - (backPillarHeight - BACK_PILLAR_SHADE_HEIGHT_OFFSET + BACK_PILLAR_WIDTH / 2);
-				RectF rectF = new RectF(
-						(float) (x1),
-						(float) (y1), 
-						(float)(x1 + BACK_PILLAR_WIDTH),
-						(float)BITMAP_HEIGHT
-						);
-				
-				canvas.drawRoundRect(rectF, BACK_PILLAR_WIDTH / 2, BACK_PILLAR_WIDTH / 2, backPillarShadePaint);
-			}
-			else{
-				stageBackPillarShift = stage.getWidth() - i;
-			}
-			
-			i += rand.nextInt((int) BACK_PILLAR_SPACE) + BACK_PILLAR_SPACE;
-		}
-		
-		/*
-		 * Draw back pillars
-		 */
-		Paint backPillarPaint = new Paint();
-		backPillarPaint.setAlpha(255);
-		backPillarPaint.setAntiAlias(true);
-		for(PillarPosition pillarPosition : backPillarPositionList){
-			Random rand = new Random();
-			backPillarPaint.setColor(backPillarColor[rand.nextInt(backPillarColor.length)]);
-			
-				canvas.drawCircle(
-						(float)(pillarPosition.getX()+BACK_PILLAR_WIDTH/2), 
-						(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
-						BACK_PILLAR_WIDTH/2, 
-						backPillarPaint);
-				canvas.drawRect(
-						(float)(pillarPosition.getX()), 
-						(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
-						(float) (pillarPosition.getX()+BACK_PILLAR_WIDTH), 
-						BITMAP_HEIGHT, 
-						backPillarPaint);
-		}
-		
-		
-		/*
-		 * Draw pillars
-		 */
-		Paint pillarPaint = new Paint();
-		pillarPaint.setAntiAlias(true);
-		for(int i = 0; i < stage.getWidth() - stageBackPillarShift; i += PILLAR_WIDTH){
-			Random rand = new Random();
-			int pillarHeight = (int) ((BITMAP_HEIGHT* 0.5 * (PILLAR_HEIGHT_MIN + PILLAR_HEIGHT_MAX)) + 
-					rand.nextGaussian() * 0.3 *
-					(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX - BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
-			pillarPaint.setColor(pillarColor[rand.nextInt(pillarColor.length)]);
-			
-			if( i + PILLAR_WIDTH <= stage.getWidth() - stageBackPillarShift ){
-				canvas.drawCircle(
-						i + PILLAR_WIDTH/2, 
-						BITMAP_HEIGHT - pillarHeight, 
-						PILLAR_WIDTH/2, 
-						pillarPaint);
-				canvas.drawRect(
-						i, 
-						BITMAP_HEIGHT - pillarHeight, 
-						i+PILLAR_WIDTH, 
-						BITMAP_HEIGHT, 
-						pillarPaint);
-			}
-			else{
-				stagePillarShift = stage.getWidth() - i;
-			}
-			
-			i += rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE;
-		}
-		
-		/*
-		 * Draw clouds
-		 */
-		Drawable cloud1Tile = context.getResources().getDrawable(R.drawable.cloud1);
-		Drawable cloud1ShadeTile = context.getResources().getDrawable(R.drawable.cloud1_shade);
-
-		Bitmap cloud1Bitmap = ((BitmapDrawable)cloud1Tile).getBitmap();
-		Bitmap cloud1ShadeBitmap = ((BitmapDrawable)cloud1ShadeTile).getBitmap();
-		
-		for(int i = 0; i< stage.getWidth(); i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO){
-			Random rand = new Random();
-			if(i + CLOUD_WIDTH_MIN*1.5 <= stage.getWidth()){
-				int cloudWidth = CLOUD_WIDTH_MIN + rand.nextInt(CLOUD_WIDTH_MAX - CLOUD_WIDTH_MIN);
-				int cloudHeight = (int) (BITMAP_HEIGHT * 
-						(1-(CLOUD_HEIGHT_MIN + rand.nextDouble()*(CLOUD_HEIGHT_MAX - CLOUD_HEIGHT_MIN))));
-				
-				int x1 = i;
-				int y1 = cloudHeight;
-				int x2 = x1 + cloudWidth;
-				int y2 = y1 + cloudWidth;
-				
-				RectF cloudRectF = new RectF(x1, y1, x2, y2);
-				RectF shadeRectF = new RectF(
-						(float)(x1 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
-						(float)(y1 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO),
-						(float)(x2 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO), 
-						(float)(y2 + cloudWidth * CLOUD_SHADE_HEIGHT_OFFSET_RATIO)
-						);
-				
-				Paint shadePaint = new Paint();
-				shadePaint.setAlpha(CLOUD_SHADE_ALPHA);
-				canvas.drawBitmap(cloud1ShadeBitmap, null, shadeRectF, shadePaint);
-				canvas.drawBitmap(cloud1Bitmap, null, cloudRectF, null);
-				
-				i += CLOUD_WIDTH_MIN * CLOUD_SPACE_RATIO * rand.nextDouble();
-			}
-		}
-		
-		drawGroundAndSubterranean(canvas, 0);
-		drawGrass(canvas, 0);
-		drawBush(canvas, 0);
-		drawTree(canvas, 0);
-		
-		thread.start();
 	}
 
 	private void drawBush(Canvas canvas, int start){
@@ -1093,6 +1041,7 @@ public class LifeSurfaceView extends SurfaceView
 			i += BUSH_SPACE_COUNT * BUSH_WIDTH + BUSH_SPACE_COUNT * BUSH_WIDTH * rand.nextDouble();
 		}
 	}
+	
 	private void drawTree(Canvas canvas, int start){
 		for(int i = (int) (start + TREE_CROWN_WIDTH); i < stage.getWidth() - TREE_SPACE_COUNT * TREE_CROWN_WIDTH; i ++){
 			Random rand = new Random();
@@ -1180,6 +1129,7 @@ public class LifeSurfaceView extends SurfaceView
 			i += TREE_SPACE_COUNT * TREE_CROWN_WIDTH + TREE_CROWN_WIDTH * TREE_SPACE_COUNT * rand.nextDouble();
 		}
 	}
+	
 	private void drawGrass(Canvas canvas, int start){
 		for(int i = start; i < stage.getWidth(); i ++){
 			Random rand = new Random();
