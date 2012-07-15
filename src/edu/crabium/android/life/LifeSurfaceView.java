@@ -115,7 +115,7 @@ public class LifeSurfaceView extends SurfaceView
 	private int BRICK_SHADE_ALPHA = 60;
 	private int BUSH_SHADE_ALPHA = 60;
 	
-	private int[][] blockArray;
+	private Brick[][] blockArray;
 	private int[] pillarColor = new int[]{
 			0xff816550, 0xffa38d76, 0xff8e725a, 
 			0xffc0b0a3, 0xffa69079, 0xff8c705a, 
@@ -147,6 +147,9 @@ public class LifeSurfaceView extends SurfaceView
 			return y;
 		}
 	}
+	
+	private enum Brick{NONE, YELLOW, BROWN};
+	
 	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
 			
@@ -310,7 +313,7 @@ public class LifeSurfaceView extends SurfaceView
 							i < (int)Math.ceil((startx + BITMAP_WIDTH)/ BLOCK_SIDE_LENGTH + 2);
 							i++){
 						for(int j = 0; j < blockArray[i].length; j++){
-							if(blockArray[i][j] != 0){
+							if(blockArray[i][j] != Brick.NONE){
 								int x1 = (int) (i * BLOCK_SIDE_LENGTH - BRICK_SHADE_WIDTH_OFFSET);
 								int y1 = (int) (j * BLOCK_SIDE_LENGTH + BRICK_SHADE_HEIGHT_OFFSET);
 								int x2 = x1 + BLOCK_SIDE_LENGTH;
@@ -345,7 +348,7 @@ public class LifeSurfaceView extends SurfaceView
 							i < (int)Math.ceil((startx + BITMAP_WIDTH)/ BLOCK_SIDE_LENGTH + 2);
 							i++){
 						for(int j = 0; j < blockArray[i].length; j++){
-							if(blockArray[i][j] != 0){
+							if(blockArray[i][j] != Brick.NONE){
 								RectF rDest = new RectF(
 										i*BLOCK_SIDE_LENGTH, 
 										j*BLOCK_SIDE_LENGTH,
@@ -353,7 +356,7 @@ public class LifeSurfaceView extends SurfaceView
 										(j+1)*BLOCK_SIDE_LENGTH  
 										);
 								
-								if(blockArray[i][j] == 2 )
+								if(blockArray[i][j] == Brick.BROWN )
 									canvas.drawBitmap(
 										brownBitmap, 
 										null,
@@ -555,7 +558,11 @@ public class LifeSurfaceView extends SurfaceView
 				}
 				
 				int newRandomBricksStartX = 0;
-				int[][] newBlockArray = new int[blockArray.length][blockArray[0].length];
+				Brick[][] newBlockArray = new Brick[blockArray.length][blockArray[0].length];
+				for(int i = 0; i < newBlockArray.length; i++)
+					for(int j= 0; j < newBlockArray[i].length; j++)
+						newBlockArray[i][j] = Brick.NONE;
+				
 				for(int i = (int) Math.floor(startx/BLOCK_SIDE_LENGTH); i < blockArray.length; i++){
 					newRandomBricksStartX ++;
 					for(int j = 0; j < blockArray[i].length; j++){
@@ -583,7 +590,7 @@ public class LifeSurfaceView extends SurfaceView
 						brickPattern = brickPattern.substring(1);
 						for(int j = 0; j < randomBricksRemain; j++){
 							newBlockArray[i + j][randomBrickBlockHeight] = 
-									1 +Integer.valueOf(brickPattern.substring(j,j+1));
+									Integer.valueOf(brickPattern.substring(j,j+1)) == 1 ? Brick.BROWN : Brick.YELLOW;
 						}
 						randomBrickOn = false;
 						i+= randomBricksRemain / 2;
@@ -607,9 +614,9 @@ public class LifeSurfaceView extends SurfaceView
 				int x = (heroPositionX + startx) / BLOCK_SIDE_LENGTH;
 				int y = (BITMAP_HEIGHT - heroPositionY) / BLOCK_SIDE_LENGTH;
 				
-				if( ( y < (BITMAP_HEIGHT / BLOCK_SIDE_LENGTH - 1 ) ) && blockArray[x][y+1] == 0)
+				if( ( y < (BITMAP_HEIGHT / BLOCK_SIDE_LENGTH - 1 ) ) && blockArray[x][y+1] == Brick.NONE)
 					heroPositionY -= BLOCK_SIDE_LENGTH;
-				else if ( (y > 1) && (blockArray[x+1][y] != 0) && (blockArray[x+1][y-1] == 0))
+				else if ( (y > 1) && (blockArray[x+1][y] != Brick.NONE) && (blockArray[x+1][y-1] == Brick.NONE))
 					heroPositionY += BLOCK_SIDE_LENGTH;
 				
 			}
@@ -634,13 +641,13 @@ public class LifeSurfaceView extends SurfaceView
 						prevBlockY = blockY;
 						
 						Random rand = new Random();
-						if(blockArray[blockX][blockY] == 1)
-								blockArray[blockX][blockY] = 0;
-						else if(blockArray[blockX][blockY] != 2){
+						if(blockArray[blockX][blockY] == Brick.YELLOW)
+								blockArray[blockX][blockY] = Brick.NONE;
+						else if(blockArray[blockX][blockY] != Brick.BROWN){
 							if(rand.nextDouble() >= BROWN_BRICK_THRESHOLD)
-								blockArray[blockX][blockY] = 2;
+								blockArray[blockX][blockY] = Brick.BROWN;
 							else
-								blockArray[blockX][blockY] = 1;
+								blockArray[blockX][blockY] = Brick.YELLOW;
 						}
 					}
 					else{
@@ -776,7 +783,11 @@ public class LifeSurfaceView extends SurfaceView
 		
 		BLOCK_NUMBER_X = (BITMAP_WIDTH * 3 + PILLAR_WIDTH) / BLOCK_SIDE_LENGTH;
 		BLOCK_NUMBER_Y = BITMAP_HEIGHT / BLOCK_SIDE_LENGTH;
-		blockArray = new int[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
+		
+		blockArray = new Brick[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
+		for(int i = 0; i < blockArray.length; i++)
+			for(int j= 0; j < blockArray[i].length; j++)
+				blockArray[i][j] = Brick.NONE;
 		
 		boolean randomBrickOn = false;
 		int randomBricksRemain = 0;
@@ -798,7 +809,7 @@ public class LifeSurfaceView extends SurfaceView
 				
 				for(int j = 0; j < randomBricksRemain; j++){
 					blockArray[i + j][randomBrickBlockHeight] = 
-							1 + Integer.valueOf(brickPattern.substring(j,j+1));
+							Integer.valueOf(brickPattern.substring(j,j+1)) == 1 ? Brick.BROWN : Brick.YELLOW;
 				}
 				
 				randomBrickOn = false;
