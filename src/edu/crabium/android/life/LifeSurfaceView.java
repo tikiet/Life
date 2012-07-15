@@ -428,11 +428,6 @@ public class LifeSurfaceView extends SurfaceView
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-//		Canvas canvas = holder.lockCanvas();
-//		BITMAP_WIDTH = canvas.getWidth();
-//		BITMAP_HEIGHT = canvas.getHeight();
-//		holder.unlockCanvasAndPost(canvas);
-		
 		initializeContant(context);
 		
 		blockArray = new Brick[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
@@ -553,7 +548,7 @@ public class LifeSurfaceView extends SurfaceView
 		for(int i = start; i < stage.getWidth() - stageBackPillarShift; i += PILLAR_WIDTH){
 			Random rand = new Random();
 			int pillarHeight = (int) ((BITMAP_HEIGHT* 0.5 * (PILLAR_HEIGHT_MIN + PILLAR_HEIGHT_MAX)) + 
-					rand.nextGaussian() * 0.3 *
+					Math.floor(rand.nextGaussian()*10) / 10.0 * 0.3 *
 					(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX - BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
 			pillarPaint.setColor(pillarColor[rand.nextInt(pillarColor.length)]);
 			
@@ -640,9 +635,11 @@ public class LifeSurfaceView extends SurfaceView
 		}
 	}
 	
-	private void initializeContant(Context context){BLOCK_SIDE_LENGTH = Integer.valueOf( 
-		context.getResources().
-		getString(R.string.block_side_length));
+	private void initializeContant(Context context){
+		
+		BLOCK_SIDE_LENGTH = Integer.valueOf( 
+			context.getResources().
+			getString(R.string.block_side_length));
 
 		BRICK_HEIGHT = Integer.valueOf( 
 			context.getResources().

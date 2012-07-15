@@ -1,6 +1,8 @@
 package edu.crabium.android.life;
 
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
@@ -16,6 +18,7 @@ public class LifeActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        //this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         this.getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         DisplayMetrics displaymetrics = new DisplayMetrics();
@@ -25,5 +28,10 @@ public class LifeActivity extends Activity {
         LifeSurfaceView lifeSurfaceView = (LifeSurfaceView)findViewById(R.id.surfaceView1);
         lifeSurfaceView.setHeight(displaymetrics.heightPixels);
         lifeSurfaceView.setWidth(displaymetrics.widthPixels);
+    }
+    
+    @Override
+    public void onConfigurationChanged(Configuration config){
+    	super.onConfigurationChanged(config);
     }
 }
