@@ -1,5 +1,6 @@
 package edu.crabium.android.life;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -26,12 +27,9 @@ public class LifeSurfaceView extends SurfaceView
 
 	private SurfaceHolder holder;
 	private LifeSurfaceViewThread thread;
-	private Bitmap bitmap;
 	private Bitmap stage;
 	private Bitmap stageWithBricks;
-	
-	private int stagePillarShift;
-	private int stageBackPillarShift;
+
 	private int heroPositionX = 2;
 	private int heroPositionY = 10;
 	private int speed = 4;
@@ -154,117 +152,121 @@ public class LifeSurfaceView extends SurfaceView
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
 		}
 		
-		int startx = 0;
 		public void run(){
 			while(true){
-				while(startx <= BITMAP_WIDTH * 2){
-					Log.d("Life", "startx = " + startx);
-					Canvas canvas = new Canvas(stageWithBricks);
-					RectF stageRectF = new RectF(
-							0,
-							0,
-							stage.getWidth(),
-							stage.getHeight());
-					
-					canvas.drawBitmap(stage, null, stageRectF, null);
-					
-					updateHero();
-					
-					drawBrickShade(canvas, startx);
-						
-					drawHeroShade(canvas, startx);
-					
-					drawBrick(startx);
-					
-					Rect rSrc = new Rect(
-							startx,
-							0,
-							startx + BITMAP_WIDTH,
-							BITMAP_HEIGHT
-							);
-					
-					RectF rDest = new RectF(
-							(float)0.0,
-							(float)0.0,
-							(float)BITMAP_WIDTH,
-							(float)BITMAP_HEIGHT
-							);
-					
-					canvas = new Canvas(bitmap);
-					canvas.drawBitmap(stageWithBricks, rSrc, rDest, null);
-					
-					drawHero(canvas);
-					
-					canvas = holder.lockCanvas();
-					canvas.drawBitmap(bitmap, 0, 0, null);
-					holder.unlockCanvasAndPost(canvas);
-					startx += speed;
-				}
-				
-				Canvas canvas = new Canvas(stage);
-				Paint backGroundPaint = new Paint();
-				backGroundPaint.setColor(BACK_GROUND_COLOR);
-				Rect rSrc = new Rect(
-						BITMAP_WIDTH*2,
+				Canvas canvas = new Canvas(stageWithBricks);
+				RectF stageRectF = new RectF(
 						0,
-						BITMAP_WIDTH*2 + BITMAP_WIDTH + PILLAR_WIDTH,
+						0,
+						stage.getWidth(),
+						stage.getHeight());
+				
+				canvas.drawBitmap(stage, null, stageRectF, null);
+				
+				updateHero();
+				
+				drawBrickShade(canvas, speed);
+					
+				drawHeroShade(canvas, speed);
+				
+				drawBrick(speed);
+				
+				Rect rSrc = new Rect(
+						0,
+						0,
+						BITMAP_WIDTH,
 						BITMAP_HEIGHT
 						);
 				
 				RectF rDest = new RectF(
 						(float)0.0,
 						(float)0.0,
-						(float)BITMAP_WIDTH + PILLAR_WIDTH,
+						(float)BITMAP_WIDTH,
 						(float)BITMAP_HEIGHT
 						);
+				
+				drawHero(canvas);
+				
+				canvas = holder.lockCanvas();
+				canvas.drawBitmap(stageWithBricks, rSrc, rDest, null);
+				holder.unlockCanvasAndPost(canvas);
+				
+				/*
+				 * shift stage
+				 */
+				rSrc = new Rect(
+						speed,
+						0,
+						stage.getWidth(),
+						stage.getHeight()
+						);
+				rDest = new RectF(
+						0,
+						0,
+						stage.getWidth() - speed,
+						stage.getHeight()
+						);
+				
+				canvas = new Canvas(stage);
 				canvas.drawBitmap(stage, rSrc, rDest, null);
+				///////////////////////////
+				
+				Paint backGroundPaint = new Paint();
+				backGroundPaint.setColor(BACK_GROUND_COLOR);
 	
 				canvas.drawRect(
-						(BITMAP_WIDTH + PILLAR_WIDTH),
+						(float) (previousPillarPosition.getX() + BACK_PILLAR_WIDTH),
 						(float)0.0, 
-						(float)BITMAP_WIDTH*3 + PILLAR_WIDTH, 
-						(float)BITMAP_HEIGHT, 
+						(float)stage.getWidth(), 
+						(float)stage.getHeight(), 
 						backGroundPaint);
 				
-				drawBackPillarAndShade(canvas, BITMAP_WIDTH + BACK_PILLAR_WIDTH - stageBackPillarShift);
+				prevBackPillarEnd = drawBackPillarAndShade(
+						canvas, 
+						(int)(prevBackPillarEnd/*previousPillarPosition.getX() /*- lastPillarOffset*/), 
+						stage.getWidth(), 
+						speed);
 				
-				drawPillar(canvas, BITMAP_WIDTH + PILLAR_WIDTH - stagePillarShift);
+				int prevPillarEndTmp = prevPillarEnd;
+				prevPillarEnd = drawPillar(canvas, prevPillarEnd, prevBackPillarEnd, speed);
 				
-				drawCloudAndShade(canvas, BITMAP_WIDTH + PILLAR_WIDTH);
+				prevCloudEnd = drawCloudAndShade(canvas, prevCloudEnd, prevBackPillarEnd, speed);
 				
+//				int newRandomBricksStartX = 0;
+//				for(int i = 0; i < newBlockArray.length; i++)
+//					for(int j= 0; j < newBlockArray[i].length; j++)
+//						newBlockArray[i][j] = Brick.NONE;
+//				
+//				synchronized(blockArray){
+//					for(int i = (int) Math.floor(offset/BRICK_WIDTH); i < blockArray.length; i++){
+//						newRandomBricksStartX ++;
+//						for(int j = 0; j < blockArray[i].length; j++){
+//							newBlockArray[i-(int) Math.floor(offset/BRICK_WIDTH)][j] 
+//									= blockArray[i][j];
+//						}
+//					}
+//				}
 				
-				int newRandomBricksStartX = 0;
-				Brick[][] newBlockArray = new Brick[blockArray.length][blockArray[0].length];
-				for(int i = 0; i < newBlockArray.length; i++)
-					for(int j= 0; j < newBlockArray[i].length; j++)
-						newBlockArray[i][j] = Brick.NONE;
+				//generateRandomBrick(newRandomBricksStartX, newBlockArray);
 				
-				for(int i = (int) Math.floor(startx/BRICK_WIDTH); i < blockArray.length; i++){
-					newRandomBricksStartX ++;
-					for(int j = 0; j < blockArray[i].length; j++){
-						newBlockArray[i-(int) Math.floor(startx/BRICK_WIDTH)][j] 
-								= blockArray[i][j];
-					}
+				prevGroundEnd = drawGroundAndSubterranean(canvas, prevGroundEnd, prevPillarEndTmp, speed );
+				
+				prevGrassEnd = drawGrass(canvas, prevGrassEnd, prevPillarEndTmp, speed);
+				
+				prevBushEnd = drawBush(canvas, prevBushEnd, prevPillarEndTmp, speed);
+				
+				prevTreeEnd = drawTree(canvas, prevTreeEnd, prevBushEnd - lastPillarOffset, speed);
+				
+				if(pillarDrawn){
+					lastPillarOffsetTmp = 0;
+					pillarDrawn = false;
 				}
-				
-				generateRandomBrick(newRandomBricksStartX, newBlockArray);
-				
-				drawGroundAndSubterranean(canvas, BITMAP_WIDTH - stagePillarShift);
-				
-				drawGrass(canvas, BITMAP_WIDTH - stagePillarShift);
-				
-				drawBush(canvas, BITMAP_WIDTH - stagePillarShift);
-				
-				drawTree(canvas, BITMAP_WIDTH - stagePillarShift);
-				
-				blockArray = newBlockArray;
-				startx = 0;
 			}
 		}
 
 		private void updateHero(){
-			if( (startx % BRICK_WIDTH) == 0){
-				int x = (int) ((heroPositionX + startx) / BRICK_WIDTH);
+			if( (speed % BRICK_WIDTH) == 0){
+				int x = (int) ((heroPositionX + speed) / BRICK_WIDTH);
 				int y = (int) ((BITMAP_HEIGHT - heroPositionY) / BRICK_HEIGHT);
 				
 				if( ( y < (BITMAP_HEIGHT / BRICK_HEIGHT - 1 ) ) && blockArray[x][y+1] == Brick.NONE)
@@ -277,16 +279,17 @@ public class LifeSurfaceView extends SurfaceView
 		
 		private int prevBlockX = 0;
 		private int prevBlockY = 0;
+		
 		public boolean onTouchEvent(MotionEvent event) {
 			if(event.getAction() == MotionEvent.ACTION_MOVE ||
 					event.getAction() == MotionEvent.ACTION_DOWN){
-				synchronized(bitmap){
+				synchronized(blockArray){
 					
 					float x = event.getX();
 					float y = event.getY();
 					Log.d("Life", "[onTouchEvent] x = " + x + ", y = " + y);
 					
-					int blockX = (int) Math.floor((x + startx)/BRICK_WIDTH);
+					int blockX = (int) Math.floor((x + speed)/BRICK_WIDTH);
 					int blockY = (int) Math.floor(y/BRICK_HEIGHT);
 					Log.d("Life", "[onTouchEvent] blockX = " + blockX + ", blockY = " + blockY);
 					
@@ -340,13 +343,21 @@ public class LifeSurfaceView extends SurfaceView
 			int height) {
 	}
 
+	
+	int prevBackPillarEnd;
+	int prevPillarEnd;
+	int prevCloudEnd;
+	int prevGroundEnd;
+	int prevGrassEnd;
+	int prevBushEnd;
+	int prevTreeEnd;
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
 		initializeConstant(context);
 		
 		blockArray = new Brick[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
 		for(int i = 0; i < blockArray.length; i++)
-			for(int j= 0; j < blockArray[i].length; j++)
+			for(int j = 0; j < blockArray[i].length; j++)
 				blockArray[i][j] = Brick.NONE;
 		
 		generateRandomBrick(0, blockArray);
@@ -357,23 +368,23 @@ public class LifeSurfaceView extends SurfaceView
 		canvas.drawRect(
 				(float)0.0, 
 				(float)0.0, 
-				(float)BITMAP_WIDTH*3 + PILLAR_WIDTH, 
-				(float)BITMAP_HEIGHT, 
+				(float)stage.getWidth(), 
+				(float)stage.getHeight(), 
 				backGroundPaint);
 		
-		drawBackPillarAndShade(canvas, BACK_PILLAR_WIDTH /2);
+		prevBackPillarEnd = drawBackPillarAndShade(canvas, BACK_PILLAR_WIDTH /2, stage.getWidth(), 0);
 		
-		drawPillar(canvas, 0);
+		prevPillarEnd = drawPillar(canvas, 0, prevBackPillarEnd, 0);
 
-		drawCloudAndShade(canvas, 0);
+		prevCloudEnd = drawCloudAndShade(canvas, 0, prevBackPillarEnd, 0);
 		
-		drawGroundAndSubterranean(canvas, 0);
+		prevGroundEnd = drawGroundAndSubterranean(canvas, 0, prevPillarEnd, 0);
 		
-		drawGrass(canvas, 0);
+		prevGrassEnd = drawGrass(canvas, 0, prevPillarEnd, 0);
 		
-		drawBush(canvas, 0);
+		prevBushEnd = drawBush(canvas, 0, prevPillarEnd, 0);
 		
-		drawTree(canvas, 0);
+		prevTreeEnd = drawTree(canvas, 0, prevBushEnd, 0);
 		
 		thread.start();
 	}
@@ -381,6 +392,7 @@ public class LifeSurfaceView extends SurfaceView
 	private void generateRandomBrick(int start, Brick[][] array) {
 		boolean randomBrickOn = false;
 		int randomBricksRemain = 0;
+		
 		for(int i = start; 
 				i < array.length - RANDOM_BRICK_COUNT_MAX; 
 				i++){
@@ -412,7 +424,8 @@ public class LifeSurfaceView extends SurfaceView
 		}
 	}
 
-	private void drawCloudAndShade(Canvas canvas, int start) {
+	private int drawCloudAndShade(Canvas canvas, int start, int end, int offset) {
+		int result = start;
 		/*
 		 * Draw clouds
 		 */
@@ -422,9 +435,9 @@ public class LifeSurfaceView extends SurfaceView
 		Bitmap cloud1Bitmap = ((BitmapDrawable)cloud1Tile).getBitmap();
 		Bitmap cloud1ShadeBitmap = ((BitmapDrawable)cloud1ShadeTile).getBitmap();
 		
-		for(int i = start; i< stage.getWidth(); i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO){
+		for(int i = start; i< end; i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO){
 			Random rand = new Random();
-			if(i + CLOUD_WIDTH_MIN*1.5 <= stage.getWidth()){
+			if(i + CLOUD_WIDTH_MIN*1.5 <= end){
 				int cloudWidth = CLOUD_WIDTH_MIN + rand.nextInt(CLOUD_WIDTH_MAX - CLOUD_WIDTH_MIN);
 				int cloudHeight = (int) (BITMAP_HEIGHT * 
 						(1-(CLOUD_HEIGHT_MIN + rand.nextDouble()*(CLOUD_HEIGHT_MAX - CLOUD_HEIGHT_MIN))));
@@ -447,26 +460,38 @@ public class LifeSurfaceView extends SurfaceView
 				canvas.drawBitmap(cloud1ShadeBitmap, null, shadeRectF, shadePaint);
 				canvas.drawBitmap(cloud1Bitmap, null, cloudRectF, null);
 				
+				result = (int) (x2 - cloudWidth * CLOUD_SHADE_WIDTH_OFFSET_RATIO);
 				i += CLOUD_WIDTH_MIN * CLOUD_SPACE_RATIO * rand.nextDouble();
 			}
 		}
+		
+		return result;
 	}
 
-	private void drawPillar(Canvas canvas, int start) {
+	int lastPillarOffset;
+	int lastPillarOffsetTmp;
+	boolean pillarDrawn = false;
+	private int drawPillar(Canvas canvas, int start, int end, int offset) {
+		lastPillarOffset += offset;
+		lastPillarOffsetTmp += offset;
+		int result = start;
+		Random rand = new Random();
 		/*
 		 * Draw pillars
 		 */
 		Paint pillarPaint = new Paint();
 		pillarPaint.setAntiAlias(true);
 		
-		for(int i = start; i < stage.getWidth() - stageBackPillarShift; i += PILLAR_WIDTH){
-			Random rand = new Random();
+		start = (int) (start + rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE - lastPillarOffset);
+		for(int i = start; i < end; i += PILLAR_WIDTH){
 			int pillarHeight = (int) ((BITMAP_HEIGHT* 0.5 * (PILLAR_HEIGHT_MIN + PILLAR_HEIGHT_MAX)) + 
 					Math.floor(rand.nextGaussian()*10) / 10.0 * 0.3 *
 					(BITMAP_HEIGHT * PILLAR_HEIGHT_MAX - BITMAP_HEIGHT * PILLAR_HEIGHT_MIN));
 			pillarPaint.setColor(pillarColor[rand.nextInt(pillarColor.length)]);
 			
-			if( i + PILLAR_WIDTH <= stage.getWidth() - stageBackPillarShift ){
+			if( i + PILLAR_WIDTH <= end){
+				pillarDrawn = true;
+				lastPillarOffset = 0;
 				canvas.drawCircle(
 						i + PILLAR_WIDTH / 2, 
 						BITMAP_HEIGHT - pillarHeight, 
@@ -478,16 +503,35 @@ public class LifeSurfaceView extends SurfaceView
 						i+PILLAR_WIDTH, 
 						BITMAP_HEIGHT, 
 						pillarPaint);
-			}
-			else{
-				stagePillarShift = stage.getWidth() - i;
+				
+				result = i+PILLAR_WIDTH;
 			}
 			
 			i += rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE;
 		}
+		
+		return result;
 	}
 
-	private void drawBackPillarAndShade(Canvas canvas, int start) {
+
+	PillarPosition previousPillarPosition;
+	/**
+	 * 
+	 * @param canvas
+	 * @param start
+	 * @param end
+	 * @param offset Offset from last drawing position
+	 * @return Ending position
+	 */
+
+	int  lastBackPillarOffset;
+	private int drawBackPillarAndShade(Canvas canvas, int start, int end, int offset) {
+		lastBackPillarOffset += offset;
+		
+		int result = start;
+		boolean drawn = false;
+		Random rand = new Random();
+		
 		/*
 		 * Draw back pillars' shade
 		 */
@@ -496,16 +540,23 @@ public class LifeSurfaceView extends SurfaceView
 		backPillarShadePaint.setColor(Color.BLACK);
 		backPillarShadePaint.setAlpha(BACK_PILLAR_SHADE_ALPHA);
 		
-		List<PillarPosition> backPillarPositionList = new LinkedList<PillarPosition>();
-		for(int i = start ; i < stage.getWidth(); i += BACK_PILLAR_WIDTH){
-			Random rand = new Random();
+		if(previousPillarPosition != null)
+			start = (int) (previousPillarPosition.getX() + BACK_PILLAR_WIDTH - lastBackPillarOffset 
+					+ rand.nextInt((int) BACK_PILLAR_SPACE) + BACK_PILLAR_SPACE);
+		else
+			start = (int) (start - lastBackPillarOffset 
+					+ rand.nextInt((int) BACK_PILLAR_SPACE) + BACK_PILLAR_SPACE);
+		
+		List<PillarPosition> backPillarPositionList = new ArrayList<PillarPosition>();
+		for(int i = start ; i < end; i += BACK_PILLAR_WIDTH){
 			int backPillarHeight = (int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN) + 
 					rand.nextInt(
 					(int)(BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MAX 
 							- BITMAP_HEIGHT * BACK_PILLAR_HEIGHT_MIN));
 			
-			if( i + BACK_PILLAR_WIDTH <= stage.getWidth()){
+			if( i + BACK_PILLAR_WIDTH <= end){
 				backPillarPositionList.add(new PillarPosition(i, backPillarHeight));
+				drawn = true;
 				
 				double x1 = i - BACK_PILLAR_SHADE_WIDTH_OFFSET;
 				double y1 = BITMAP_HEIGHT - (backPillarHeight - BACK_PILLAR_SHADE_HEIGHT_OFFSET + BACK_PILLAR_WIDTH / 2);
@@ -515,38 +566,60 @@ public class LifeSurfaceView extends SurfaceView
 						(float)(x1 + BACK_PILLAR_WIDTH),
 						(float)BITMAP_HEIGHT
 						);
-				
+			
 				canvas.drawRoundRect(rectF, BACK_PILLAR_WIDTH / 2, BACK_PILLAR_WIDTH / 2, backPillarShadePaint);
-			}
-			else{
-				stageBackPillarShift = stage.getWidth() - i;
 			}
 			
 			i += rand.nextInt((int) BACK_PILLAR_SPACE) + BACK_PILLAR_SPACE;
 		}
 		
+		if(drawn == false){
+			return result;
+		}
 		/*
 		 * Draw back pillars
 		 */
 		Paint backPillarPaint = new Paint();
 		backPillarPaint.setAlpha(255);
 		backPillarPaint.setAntiAlias(true);
-		for(PillarPosition pillarPosition : backPillarPositionList){
-			Random rand = new Random();
+		
+		if(previousPillarPosition != null){
+			backPillarPaint.setColor(backPillarColor[rand.nextInt(backPillarColor.length)]);
+			canvas.drawCircle(
+					(float)(previousPillarPosition.getX()+BACK_PILLAR_WIDTH/2 - lastBackPillarOffset), 
+					(float)(BITMAP_HEIGHT - previousPillarPosition.getY()), 
+					BACK_PILLAR_WIDTH / 2, 
+					backPillarPaint);
+			canvas.drawRect(
+					(float)(previousPillarPosition.getX() - lastBackPillarOffset ), 
+					(float)(BITMAP_HEIGHT - previousPillarPosition.getY()), 
+					(float) (previousPillarPosition.getX()+BACK_PILLAR_WIDTH - lastBackPillarOffset ), 
+					BITMAP_HEIGHT, 
+					backPillarPaint);
+		}
+		
+		for(int i = 0; i < backPillarPositionList.size() - 1; i ++){
+			PillarPosition pillarPosition = backPillarPositionList.get(i);
+			
 			backPillarPaint.setColor(backPillarColor[rand.nextInt(backPillarColor.length)]);
 			
-				canvas.drawCircle(
-						(float)(pillarPosition.getX()+BACK_PILLAR_WIDTH/2), 
-						(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
-						BACK_PILLAR_WIDTH/2, 
-						backPillarPaint);
-				canvas.drawRect(
-						(float)(pillarPosition.getX()), 
-						(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
-						(float) (pillarPosition.getX()+BACK_PILLAR_WIDTH), 
-						BITMAP_HEIGHT, 
-						backPillarPaint);
+			canvas.drawCircle(
+					(float)(pillarPosition.getX()+BACK_PILLAR_WIDTH/2), 
+					(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
+					BACK_PILLAR_WIDTH/2, 
+					backPillarPaint);
+			canvas.drawRect(
+					(float)(pillarPosition.getX()), 
+					(float)(BITMAP_HEIGHT - pillarPosition.getY()), 
+					(float) (pillarPosition.getX() + BACK_PILLAR_WIDTH), 
+					BITMAP_HEIGHT, 
+					backPillarPaint);
+			
+			result = (int) (pillarPosition.getX() + BACK_PILLAR_WIDTH);
 		}
+		previousPillarPosition = backPillarPositionList.get(backPillarPositionList.size() -1);
+		lastBackPillarOffset = 0;
+		return result;
 	}
 	
 	private void initializeConstant(Context context){
@@ -669,75 +742,75 @@ public class LifeSurfaceView extends SurfaceView
 		
 		GROUND_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.ground_ratio));
+				getString(R.string.ground_ratio));
 		
 		GROUND_SECTION_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.ground_section_ratio));
+				getString(R.string.ground_section_ratio));
 		
 		SUBTERRANEAN_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.subterranean_ratio));
+				getString(R.string.subterranean_ratio));
 		
 		GRASS_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.grass_ratio));
+				getString(R.string.grass_ratio));
 		
 		GRASS_SPACE = Double.valueOf(
 				context.getResources().
-						getString(R.string.grass_space));
+				getString(R.string.grass_space));
 		
 		TREE_CROWN_WIDTH = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.tree_crown_width_ratio));
+				getString(R.string.tree_crown_width_ratio));
 		
 		TREE_CROWN_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.tree_crown_height_ratio));
+				getString(R.string.tree_crown_height_ratio));
 		
 		TRUNK_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.trunk_height_ratio));
+				getString(R.string.trunk_height_ratio));
 		
 		TRUNK_WIDTH= BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.trunk_width_ratio));
+				getString(R.string.trunk_width_ratio));
 		
 		TREE_SPACE_COUNT = Double.valueOf(
 				context.getResources().
-						getString(R.string.tree_space_count));
+				getString(R.string.tree_space_count));
 		
 		TREE_SHADE_ANGLE = Double.valueOf(
 				context.getResources().
-						getString(R.string.tree_shade_angle));
+				getString(R.string.tree_shade_angle));
 
 		TREE_CROWN_SHADE_HEIGHT_OFFSET_RATIO = Double.valueOf(
 				context.getResources().
-						getString(R.string.tree_crown_shade_height_offset_ratio));
+				getString(R.string.tree_crown_shade_height_offset_ratio));
 		
 		BUSH_WIDTH = BITMAP_WIDTH * Double.valueOf(
 				context.getResources().
-						getString(R.string.bush_width_ratio));
+				getString(R.string.bush_width_ratio));
 		
 		BUSH_HEIGHT_MAX = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.bush_height_max_ratio));
+				getString(R.string.bush_height_max_ratio));
 		
 		BUSH_HEIGHT_MIN = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.bush_height_min_ratio));
+				getString(R.string.bush_height_min_ratio));
 		
 		BUSH_HEIGHT_OFFSET_FROM_WALL = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.bush_height_offset_from_wall_ratio));
+				getString(R.string.bush_height_offset_from_wall_ratio));
 		
 		BUSH_HEIGHT_OFFSET_FROM_BUSH = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-						getString(R.string.bush_height_offset_from_bush_ratio));
+				getString(R.string.bush_height_offset_from_bush_ratio));
 		
 		BUSH_SPACE_COUNT = Double.valueOf(
 				context.getResources().
-						getString(R.string.bush_space_count));
+				getString(R.string.bush_space_count));
 		
 		BRICK_SHADE_HEIGHT_OFFSET = BRICK_HEIGHT * Double.valueOf(
 				context.getResources().
@@ -747,13 +820,15 @@ public class LifeSurfaceView extends SurfaceView
 				context.getResources().
 				getString(R.string.brick_shade_width_offset_ratio));
 				
-		bitmap = Bitmap.createBitmap(
-				BITMAP_WIDTH, 
-				BITMAP_HEIGHT, 
-				Bitmap.Config.ARGB_8888);
+		double stageWidth =
+				BITMAP_WIDTH +
+				BACK_PILLAR_WIDTH * 2 + 
+				PILLAR_WIDTH + BUSH_WIDTH * 3 + 
+				TREE_CROWN_WIDTH + 
+				GROUND_HEIGHT / Math.tan(Math.toRadians(TREE_SHADE_ANGLE));
 		
 		stage = Bitmap.createBitmap(
-				BITMAP_WIDTH*3 + PILLAR_WIDTH, 
+				(int) stageWidth, 
 				BITMAP_HEIGHT, 
 				Bitmap.Config.ARGB_8888);
 		
@@ -762,17 +837,28 @@ public class LifeSurfaceView extends SurfaceView
 				stage.getHeight(),
 				Bitmap.Config.ARGB_8888);
 		
-		BLOCK_NUMBER_X = (int) ((BITMAP_WIDTH * 3 + PILLAR_WIDTH) / BRICK_WIDTH);
-		BLOCK_NUMBER_Y = (int) (BITMAP_HEIGHT / BRICK_HEIGHT);
+		BLOCK_NUMBER_X = (int) ( stage.getWidth() / BRICK_WIDTH);
+		BLOCK_NUMBER_Y = (int) ( stage.getHeight() / BRICK_HEIGHT);
 	}
 
-	private void drawBush(Canvas canvas, int start){
-		for(int i = (int) (start + BUSH_WIDTH); i < stage.getWidth() - BUSH_WIDTH * BUSH_SPACE_COUNT; i++){
-			Random rand = new Random();
+	int lastBushOffset;
+	private int drawBush(Canvas canvas, int start, int end, int offset){
+		lastBushOffset += offset;
+		Random rand = new Random();
+		int result = start;
+		
+		start = (int) (start - lastBushOffset
+				+ BUSH_SPACE_COUNT * BUSH_WIDTH 
+				+ BUSH_SPACE_COUNT * BUSH_WIDTH * rand.nextDouble());
+		
+		end = end - lastPillarOffset;
+		
+		for(int i = start; i < end - BUSH_WIDTH * 2; i++){
 			Paint bushShadePaint = new Paint();
 			bushShadePaint.setAlpha(BUSH_SHADE_ALPHA);
 			Drawable bushDrawable = context.getResources().getDrawable(R.drawable.bush);
 			Bitmap bushBitmap = ((BitmapDrawable)bushDrawable).getBitmap();
+			lastBushOffset = 0;
 			
 			/*
 			 * Draw left bush's shade
@@ -813,6 +899,7 @@ public class LifeSurfaceView extends SurfaceView
 					);
 			canvas.drawBitmap(bushBitmap, null, rBushShadeRectF, bushShadePaint);
 			
+			result = (int) rBushX2;
 			/*
 			 * Draw middle bush's shade
 			 */
@@ -883,15 +970,29 @@ public class LifeSurfaceView extends SurfaceView
 
 			i += BUSH_SPACE_COUNT * BUSH_WIDTH + BUSH_SPACE_COUNT * BUSH_WIDTH * rand.nextDouble();
 		}
+		
+		return result;
 	}
 	
-	private void drawTree(Canvas canvas, int start){
-		for(int i = (int) (start + TREE_CROWN_WIDTH); i < stage.getWidth() - TREE_SPACE_COUNT * TREE_CROWN_WIDTH; i ++){
-			Random rand = new Random();
+	int lastTreeOffset;
+	private int drawTree(Canvas canvas, int start, int end, int offset){
+		lastTreeOffset += offset;
+		Random rand = new Random();
+		int result = start;
+		
+		start = (int) (start - lastTreeOffset
+				+ TREE_SPACE_COUNT * TREE_CROWN_WIDTH 
+				+ TREE_CROWN_WIDTH * TREE_SPACE_COUNT * rand.nextDouble());
+		
+		end = (int) (end -
+				(TREE_CROWN_WIDTH + 
+				GROUND_HEIGHT / Math.tan(Math.toRadians(TREE_SHADE_ANGLE))));
+		
+		for(int i = start; i < end; i ++){
 			float rootHeightMax = (float) (stage.getHeight() - SUBTERRANEAN_HEIGHT - GROUND_SECTION_HEIGHT - GROUND_HEIGHT);
 			float rootHeightMin = (float) (rootHeightMax + GROUND_HEIGHT - GRASS_HEIGHT);
-			float rootHeight = (float) (rootHeightMax + rand.nextDouble()*(rootHeightMin - rootHeightMax));
-			
+			float rootHeight = (float) (rootHeightMax + rand.nextDouble() * (rootHeightMin - rootHeightMax));
+			lastTreeOffset = 0;
 			/*
 			 * Draw trunk
 			 */
@@ -969,12 +1070,17 @@ public class LifeSurfaceView extends SurfaceView
 			treeCrownPaint.setAntiAlias(true);
 			canvas.drawBitmap(treeCrownBitmap, null, treeCrownRectF, treeCrownPaint);
 			
+			result = (int) treeCrownX2;
 			i += TREE_SPACE_COUNT * TREE_CROWN_WIDTH + TREE_CROWN_WIDTH * TREE_SPACE_COUNT * rand.nextDouble();
 		}
+		
+		return result;
 	}
 	
-	private void drawGrass(Canvas canvas, int start){
-		for(int i = start; i < stage.getWidth(); i ++){
+	private int drawGrass(Canvas canvas, int start, int end, int offset){
+		start = start - lastPillarOffsetTmp;
+		
+		for(int i = start; i < end; i ++){
 			Random rand = new Random();
 			// Max, from the lower left corner
 			float grassHeightMax = (float) (stage.getHeight() - SUBTERRANEAN_HEIGHT - GROUND_SECTION_HEIGHT - GROUND_HEIGHT);
@@ -993,15 +1099,18 @@ public class LifeSurfaceView extends SurfaceView
 			
 			i += GRASS_SPACE + rand.nextDouble()*GRASS_SPACE;
 		}
+		
+		return end;
 	}
 	
-	private void drawGroundAndSubterranean(Canvas canvas, int start){		
+	private int drawGroundAndSubterranean(Canvas canvas, int start, int end, int offset){
+		start = start - lastPillarOffsetTmp - offset;
 		/*
 		 * Draw subterranean layer
 		 */
 		float subterraneanX1 = start;
 		float subterraneanY1 = (float) (stage.getHeight() - SUBTERRANEAN_HEIGHT);
-		float subterraneanX2 = stage.getWidth();
+		float subterraneanX2 = end;
 		float subterraneanY2 = stage.getHeight();
 		Paint subterraneanPaint = new Paint();
 		subterraneanPaint.setColor(SUBTERRANEAN_COLOR);
@@ -1018,7 +1127,7 @@ public class LifeSurfaceView extends SurfaceView
 		 */
 		float groundSectionX1 = start;
 		float groundSectionY1 = (int) (subterraneanY1 - GROUND_SECTION_HEIGHT);
-		float groundSectionX2 = stage.getWidth();
+		float groundSectionX2 = end;
 		float groundSectionY2 = subterraneanY1;
 		Paint groundSectionPaint = new Paint();
 		groundSectionPaint.setColor(GROUND_SECTION_COLOR);
@@ -1035,7 +1144,7 @@ public class LifeSurfaceView extends SurfaceView
 		 */
 		float groundX1 = start;
 		float groundY1 = (int) (groundSectionY1 - GROUND_HEIGHT);
-		float groundX2 = stage.getWidth();
+		float groundX2 = end;
 		float groundY2 = groundSectionY1;
 		Paint groundPaint = new Paint();
 		groundPaint.setColor(GROUND_COLOR);
@@ -1052,12 +1161,15 @@ public class LifeSurfaceView extends SurfaceView
 		 */
 		float groundBorderX1 = start;
 		float groundBorderY1 = subterraneanY1;
-		float groundBorderX2 = stage.getWidth();
+		float groundBorderX2 = end;
 		float groundBorderY2 = subterraneanY1;
 		Paint groundBorderPaint = new Paint();
 		groundBorderPaint.setColor(GROUND_BORDER_COLOR);
 		canvas.drawLine(groundBorderX1, groundBorderY1, groundBorderX2, groundBorderY2, groundBorderPaint);
+		
+		return end;
 	}
+	
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
 	}
