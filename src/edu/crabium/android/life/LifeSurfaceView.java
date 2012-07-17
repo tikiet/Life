@@ -151,25 +151,25 @@ public class LifeSurfaceView extends SurfaceView
 	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
 		}
-		
+
+		int offsetMod = 0;
 		public void run(){
 			while(true){
 				Canvas canvas = new Canvas(stageWithBricks);
-				RectF stageRectF = new RectF(
-						0,
-						0,
-						stage.getWidth(),
-						stage.getHeight());
+				RectF stageRectF = new RectF( 0, 0, stage.getWidth(), stage.getHeight());
 				
 				canvas.drawBitmap(stage, null, stageRectF, null);
 				
 				updateHero();
-				
-				drawBrickShade(canvas, speed);
-					
+
+				synchronized(blockArray){
+					drawBrickShade(canvas, 0, offsetMod);
+				}
 				drawHeroShade(canvas, speed);
 				
-				drawBrick(speed);
+				synchronized(blockArray){
+					drawBrick(0, offsetMod);
+				}
 				
 				Rect rSrc = new Rect(
 						0,
@@ -191,6 +191,16 @@ public class LifeSurfaceView extends SurfaceView
 				canvas.drawBitmap(stageWithBricks, rSrc, rDest, null);
 				holder.unlockCanvasAndPost(canvas);
 				
+				offsetMod = (int) ((offsetMod + speed) % BRICK_WIDTH);
+				if(offsetMod == 0){
+					synchronized(blockArray){
+						for(int i = 0; i < blockArray.length - 1; i++)
+							for(int j = 0; j < blockArray[i].length; j++)
+								blockArray[i][j] = blockArray[i+1][j];
+						for(int i = 0; i < blockArray[blockArray.length - 1].length; i ++)
+							blockArray[blockArray.length - 1][i] = Brick.NONE;
+					}
+				}
 				/*
 				 * shift stage
 				 */
@@ -223,7 +233,7 @@ public class LifeSurfaceView extends SurfaceView
 				
 				prevBackPillarEnd = drawBackPillarAndShade(
 						canvas, 
-						(int)(prevBackPillarEnd/*previousPillarPosition.getX() /*- lastPillarOffset*/), 
+						(int)(prevBackPillarEnd), 
 						stage.getWidth(), 
 						speed);
 				
@@ -232,22 +242,7 @@ public class LifeSurfaceView extends SurfaceView
 				
 				prevCloudEnd = drawCloudAndShade(canvas, prevCloudEnd, prevBackPillarEnd, speed);
 				
-//				int newRandomBricksStartX = 0;
-//				for(int i = 0; i < newBlockArray.length; i++)
-//					for(int j= 0; j < newBlockArray[i].length; j++)
-//						newBlockArray[i][j] = Brick.NONE;
-//				
-//				synchronized(blockArray){
-//					for(int i = (int) Math.floor(offset/BRICK_WIDTH); i < blockArray.length; i++){
-//						newRandomBricksStartX ++;
-//						for(int j = 0; j < blockArray[i].length; j++){
-//							newBlockArray[i-(int) Math.floor(offset/BRICK_WIDTH)][j] 
-//									= blockArray[i][j];
-//						}
-//					}
-//				}
-				
-				//generateRandomBrick(newRandomBricksStartX, newBlockArray);
+				prevBrickEnd = generateRandomBrick(prevBrickEnd, blockArray, speed);
 				
 				prevGroundEnd = drawGroundAndSubterranean(canvas, prevGroundEnd, prevPillarEndTmp, speed );
 				
@@ -289,7 +284,7 @@ public class LifeSurfaceView extends SurfaceView
 					float y = event.getY();
 					Log.d("Life", "[onTouchEvent] x = " + x + ", y = " + y);
 					
-					int blockX = (int) Math.floor((x + speed)/BRICK_WIDTH);
+					int blockX = (int) Math.floor((x + offsetMod)/BRICK_WIDTH);
 					int blockY = (int) Math.floor(y/BRICK_HEIGHT);
 					Log.d("Life", "[onTouchEvent] blockX = " + blockX + ", blockY = " + blockY);
 					
@@ -351,6 +346,7 @@ public class LifeSurfaceView extends SurfaceView
 	int prevGrassEnd;
 	int prevBushEnd;
 	int prevTreeEnd;
+	int prevBrickEnd;
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
 		initializeConstant(context);
@@ -360,7 +356,7 @@ public class LifeSurfaceView extends SurfaceView
 			for(int j = 0; j < blockArray[i].length; j++)
 				blockArray[i][j] = Brick.NONE;
 		
-		generateRandomBrick(0, blockArray);
+		prevBrickEnd = generateRandomBrick(0, blockArray, 0);
 			
 		Canvas canvas = new Canvas(stage);
 		Paint backGroundPaint = new Paint();
@@ -389,21 +385,26 @@ public class LifeSurfaceView extends SurfaceView
 		thread.start();
 	}
 	
-	private void generateRandomBrick(int start, Brick[][] array) {
+	int lastBrickOffset;
+	private int generateRandomBrick(int start, Brick[][] array, int offset) {
+		int result = start;
+		lastBrickOffset += offset;
 		boolean randomBrickOn = false;
 		int randomBricksRemain = 0;
 		
-		for(int i = start; 
-				i < array.length - RANDOM_BRICK_COUNT_MAX; 
-				i++){
+		start = (int) (Math.floor(start - lastBrickOffset) / BRICK_WIDTH);
+		for(int i = start; i < array.length - RANDOM_BRICK_COUNT_MAX; i++){
 			Random rand = new Random();
 			if(randomBrickOn){
+				lastBrickOffset = 0;
+				
 				randomBricksRemain = RANDOM_BRICK_COUNT_MIN + 
 						rand.nextInt(RANDOM_BRICK_COUNT_MAX - RANDOM_BRICK_COUNT_MIN);
 				
 				int randomBrickHeight = BITMAP_HEIGHT - (int) (RANDOM_BRICK_HEIGHT_MIN*BITMAP_HEIGHT +
 						rand.nextInt((int)(RANDOM_BRICK_HEIGHT_MAX * BITMAP_HEIGHT - 
 								RANDOM_BRICK_HEIGHT_MIN* BITMAP_HEIGHT))) ;
+				
 				int randomBrickBlockHeight = (int) (randomBrickHeight / BRICK_HEIGHT);
 
 				String brickPattern = Integer.toBinaryString((1 << rand.nextInt(randomBricksRemain)) + (1 << (randomBricksRemain))) + "0";
@@ -414,6 +415,8 @@ public class LifeSurfaceView extends SurfaceView
 					array[i + j][randomBrickBlockHeight] = 
 							Integer.valueOf(brickPattern.substring(j,j+1)) == 1 ? Brick.BROWN : Brick.YELLOW;
 				}
+				
+				result = (int) ((i + randomBricksRemain + 1) * BRICK_WIDTH);
 				randomBrickOn = false;
 				i+= randomBricksRemain / 2;
 			}else{
@@ -422,9 +425,14 @@ public class LifeSurfaceView extends SurfaceView
 				}
 			}
 		}
+		
+		return result;
 	}
 
+	int lastCloudOffset;
 	private int drawCloudAndShade(Canvas canvas, int start, int end, int offset) {
+		lastCloudOffset += offset;
+		Random rand = new Random();
 		int result = start;
 		/*
 		 * Draw clouds
@@ -435,9 +443,13 @@ public class LifeSurfaceView extends SurfaceView
 		Bitmap cloud1Bitmap = ((BitmapDrawable)cloud1Tile).getBitmap();
 		Bitmap cloud1ShadeBitmap = ((BitmapDrawable)cloud1ShadeTile).getBitmap();
 		
+		start = (int) (start - lastCloudOffset 
+				+ CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO
+				+ CLOUD_WIDTH_MIN * CLOUD_SPACE_RATIO * rand.nextDouble());
+		
 		for(int i = start; i< end; i += CLOUD_WIDTH_MAX * CLOUD_SPACE_RATIO){
-			Random rand = new Random();
 			if(i + CLOUD_WIDTH_MIN*1.5 <= end){
+				lastCloudOffset = 0;
 				int cloudWidth = CLOUD_WIDTH_MIN + rand.nextInt(CLOUD_WIDTH_MAX - CLOUD_WIDTH_MIN);
 				int cloudHeight = (int) (BITMAP_HEIGHT * 
 						(1-(CLOUD_HEIGHT_MIN + rand.nextDouble()*(CLOUD_HEIGHT_MAX - CLOUD_HEIGHT_MIN))));
@@ -483,6 +495,7 @@ public class LifeSurfaceView extends SurfaceView
 		pillarPaint.setAntiAlias(true);
 		
 		start = (int) (start + rand.nextInt((int) PILLAR_SPACE) + PILLAR_SPACE - lastPillarOffset);
+		end = end - lastBackPillarOffset;
 		for(int i = start; i < end; i += PILLAR_WIDTH){
 			int pillarHeight = (int) ((BITMAP_HEIGHT* 0.5 * (PILLAR_HEIGHT_MIN + PILLAR_HEIGHT_MAX)) + 
 					Math.floor(rand.nextGaussian()*10) / 10.0 * 0.3 *
@@ -1174,7 +1187,7 @@ public class LifeSurfaceView extends SurfaceView
 	public void surfaceDestroyed(SurfaceHolder holder) {
 	}
 
-	private void drawBrickShade(Canvas canvas, int startx) {
+	private void drawBrickShade(Canvas canvas, int start, int offset) {
 		/*
 		 * Draw bricks' shade
 		 */
@@ -1182,17 +1195,17 @@ public class LifeSurfaceView extends SurfaceView
 		Bitmap shadeBitmap = ((BitmapDrawable)shadeTile).getBitmap();
 		Paint brickShadePaint = new Paint();
 		brickShadePaint.setAlpha(BRICK_SHADE_ALPHA);
-		for(int i = (int)Math.floor(startx / BRICK_WIDTH); 
-				i < (int)Math.ceil((startx + BITMAP_WIDTH)/ BRICK_WIDTH + 2);
+		
+		for(int i = (int)Math.floor(start / BRICK_WIDTH); 
+				i < (int)Math.ceil((start + BITMAP_WIDTH)/ BRICK_WIDTH + 2);
 				i++){
 			for(int j = 0; j < blockArray[i].length; j++){
 				if(blockArray[i][j] != Brick.NONE){
-					int x1 = (int) (i * BRICK_WIDTH - BRICK_SHADE_WIDTH_OFFSET);
+					int x1 = (int) (i * BRICK_WIDTH - BRICK_SHADE_WIDTH_OFFSET - offset);
 					int y1 = (int) (j * BRICK_HEIGHT + BRICK_SHADE_HEIGHT_OFFSET);
 					int x2 = (int) (x1 + BRICK_WIDTH);
 					int y2 = (int) (y1 + BRICK_HEIGHT);
 					
-					if(x1 < 0) x1 = 0;
 					if(y1 > BITMAP_HEIGHT) y1 = BITMAP_HEIGHT;
 					if(y2 > BITMAP_HEIGHT) y2 = BITMAP_HEIGHT;
 					
@@ -1220,7 +1233,7 @@ public class LifeSurfaceView extends SurfaceView
 		canvas.drawBitmap(heroShadeBitmap, null, hsDest, heroShadePaint);
 	}
 
-	private void drawBrick(int startx) {
+	private void drawBrick(int start, int offset) {
 		/*
 		 * Draw bricks
 		 */
@@ -1229,15 +1242,15 @@ public class LifeSurfaceView extends SurfaceView
 		Bitmap yellowBitmap = ((BitmapDrawable)yellowTile).getBitmap();
 		Bitmap brownBitmap = ((BitmapDrawable)brownTile).getBitmap();
 		Canvas canvas = new Canvas(stageWithBricks);
-		for(int i = (int)Math.floor(startx / BRICK_WIDTH); 
-				i < (int)Math.ceil((startx + BITMAP_WIDTH)/ BRICK_WIDTH + 2);
+		for(int i = (int)Math.floor(start / BRICK_WIDTH); 
+				i < (int)Math.ceil((start + BITMAP_WIDTH)/ BRICK_WIDTH + 2);
 				i++){
 			for(int j = 0; j < blockArray[i].length; j++){
 				if(blockArray[i][j] != Brick.NONE){
 					RectF rDest = new RectF(
-							(float)(i*BRICK_WIDTH), 
+							(float)(i*BRICK_WIDTH - offset), 
 							(float)(j*BRICK_HEIGHT),
-							(float)((i+1)*BRICK_WIDTH), 
+							(float)((i+1)*BRICK_WIDTH - offset), 
 							(float)((j+1)*BRICK_HEIGHT)  
 							);
 					
