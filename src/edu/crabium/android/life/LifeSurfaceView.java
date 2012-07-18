@@ -1,12 +1,22 @@
 package edu.crabium.android.life;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Random;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -16,6 +26,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Bundle;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -29,10 +40,31 @@ public class LifeSurfaceView extends SurfaceView
 	private LifeSurfaceViewThread thread;
 	private Bitmap stage;
 	private Bitmap stageWithBricks;
-
-	private int heroPositionX = 2;
-	private int heroPositionY = 10;
+	private int heroPositionX;
+	private int heroPositionY;
 	private int speed = 4;
+	
+	private int offsetMod;
+	private ThreadState threadState;
+	
+	private int prevBackPillarEnd;
+	private int prevPillarEnd;
+	private int prevCloudEnd;
+	private int prevGroundEnd;
+	private int prevGrassEnd;
+	private int prevBushEnd;
+	private int prevTreeEnd;
+	private int prevBrickEnd;
+	
+	int lastBrickOffset;
+	int lastCloudOffset;
+	int lastPillarOffset;
+	int lastPillarOffsetTmp;
+	boolean pillarDrawn = false;
+	int  lastBackPillarOffset;
+	int lastBushOffset;
+	int lastTreeOffset;
+	PillarPosition previousPillarPosition;
 	
 	private int BACK_GROUND_COLOR = 0xff9bc3cf;
 	private int GROUND_COLOR = 0xffced852;
@@ -114,11 +146,13 @@ public class LifeSurfaceView extends SurfaceView
 	private int BUSH_SHADE_ALPHA = 60;
 	
 	private Brick[][] blockArray;
+	//private int[] columnMagic;
 	private int[] pillarColor = new int[]{
 			0xff816550, 0xffa38d76, 0xff8e725a, 
 			0xffc0b0a3, 0xffa69079, 0xff8c705a, 
 			0xff9c846c};
 	
+	private List<PriorityQueue<SceneTile>> columnList;
 	private int[] backPillarColor = new int[]{ 0xff342d27, 0xff221e1b, 0xff201f1d};
 	private int[] bushColor = new int[]{
 			0xff8d6e23,0xffaa8729,0xff997822,
@@ -128,36 +162,19 @@ public class LifeSurfaceView extends SurfaceView
 	
 	private Context context;
 	
-	private class PillarPosition{
-		private double x;
-		private double y;
-		
-		public PillarPosition(double x, double y){
-			this.x = x;
-			this.y = y;
-		}
-		
-		public double getX(){
-			return x;
-		}
-		
-		public double getY(){
-			return y;
-		}
-	}
+	private Random rand = new Random();
 	
 	private enum Brick{NONE, YELLOW, BROWN};
 	
-	private class LifeSurfaceViewThread extends Thread{
+ 	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
 		}
 
-		int offsetMod = 0;
 		public void run(){
-			while(true){
+			while(threadState == ThreadState.RUNNING){
+				//Canvas canvas = new Canvas(stage);
 				Canvas canvas = new Canvas(stageWithBricks);
-				RectF stageRectF = new RectF( 0, 0, stage.getWidth(), stage.getHeight());
-				
+				RectF stageRectF = new RectF( 0, 0, stage.getWidth(), stage.getHeight());			
 				canvas.drawBitmap(stage, null, stageRectF, null);
 				
 				updateHero();
@@ -171,12 +188,7 @@ public class LifeSurfaceView extends SurfaceView
 					drawBrick(0, offsetMod);
 				}
 				
-				Rect rSrc = new Rect(
-						0,
-						0,
-						BITMAP_WIDTH,
-						BITMAP_HEIGHT
-						);
+				Rect rSrc = new Rect(0,0,BITMAP_WIDTH,BITMAP_HEIGHT);
 				
 				RectF rDest = new RectF(
 						(float)0.0,
@@ -191,6 +203,8 @@ public class LifeSurfaceView extends SurfaceView
 				canvas.drawBitmap(stageWithBricks, rSrc, rDest, null);
 				holder.unlockCanvasAndPost(canvas);
 				
+				prevX -= speed;
+				
 				offsetMod = (int) ((offsetMod + speed) % BRICK_WIDTH);
 				if(offsetMod == 0){
 					synchronized(blockArray){
@@ -199,7 +213,17 @@ public class LifeSurfaceView extends SurfaceView
 								blockArray[i][j] = blockArray[i+1][j];
 						for(int i = 0; i < blockArray[blockArray.length - 1].length; i ++)
 							blockArray[blockArray.length - 1][i] = Brick.NONE;
+						
+						columnList.remove(0);
+						columnList.add(new PriorityQueue<SceneTile>());
 					}
+					
+//					synchronized(columnMagic){
+//						for(int i = 0; i < columnMagic.length - 1;i ++){
+//							columnMagic[i] = columnMagic[i + 1];
+//						}
+//						columnMagic[columnMagic.length] = rand.nextInt();
+//					}
 				}
 				/*
 				 * shift stage
@@ -272,8 +296,8 @@ public class LifeSurfaceView extends SurfaceView
 			}
 		}
 		
-		private int prevBlockX = 0;
-		private int prevBlockY = 0;
+		private int prevX = 0;
+		private int prevY = 0;
 		
 		public boolean onTouchEvent(MotionEvent event) {
 			if(event.getAction() == MotionEvent.ACTION_MOVE ||
@@ -288,11 +312,12 @@ public class LifeSurfaceView extends SurfaceView
 					int blockY = (int) Math.floor(y/BRICK_HEIGHT);
 					Log.d("Life", "[onTouchEvent] blockX = " + blockX + ", blockY = " + blockY);
 					
+					int prevBlockX = (int) Math.floor((prevX + offsetMod)/BRICK_WIDTH);
+					int prevBlockY = (int) Math.floor(prevY/BRICK_HEIGHT);
 					if(blockX != prevBlockX || blockY != prevBlockY){
-						prevBlockX = blockX;
-						prevBlockY = blockY;
+						prevX = (int) x;
+						prevY = (int) y;
 						
-						Random rand = new Random();
 						if(blockArray[blockX][blockY] == Brick.YELLOW)
 								blockArray[blockX][blockY] = Brick.NONE;
 						else if(blockArray[blockX][blockY] != Brick.BROWN){
@@ -312,12 +337,155 @@ public class LifeSurfaceView extends SurfaceView
 		}
 		
 	}
+ 	
+ 	public void setThreadState(ThreadState r){
+ 		if(r == ThreadState.RUNNING){
+ 			if(getThreadState() != ThreadState.RUNNING){
+ 				threadState = ThreadState.RUNNING;
+ 				thread = new LifeSurfaceViewThread(holder, context);
+ 				thread.start();
+ 			}
+ 		}
+ 		else if( r == ThreadState.RECOVER){
+ 			threadState = ThreadState.STOPPED;
+ 			retrieveLifeData();
+ 			threadState = ThreadState.RUNNING;
+ 			thread = new LifeSurfaceViewThread(holder, context);
+ 			thread.start();
+ 		}
+ 		else if( r == ThreadState.STOPPED){
+ 			threadState = ThreadState.STOPPED;
+ 			saveLifeData();
+ 		}
+ 	}
+ 	
+ 	private void retrieveLifeData(){
+ 		try{
+ 			FileInputStream stageIn = new FileInputStream("/data/data/edu.crabium.android.life/stage");
+ 			Bitmap oldStage = BitmapFactory.decodeStream(stageIn);
+ 			Canvas c = new Canvas(stage);
+ 			c.drawBitmap(oldStage, null, new RectF(0,0,stage.getWidth(), stage.getHeight()), null);
+ 			stageIn.close();
+ 			File file = new File("/data/data/edu.crabium.android.life/stage");
+ 			file.delete();
+ 		}
+ 		catch(Exception e){
+ 		}
+ 		
+ 		try{
+ 			BufferedReader arrayIn = new BufferedReader(new FileReader("/data/data/edu.crabium.android.life/array"));
+ 			int width = Integer.valueOf(arrayIn.readLine());
+ 			int height = Integer.valueOf(arrayIn.readLine());
+ 			blockArray = new Brick[width][height];
+ 			for(int i = 0; i < width; i ++){
+ 				for(int j = 0; j < height; j++){
+ 					blockArray[i][j] = Brick.valueOf(arrayIn.readLine());
+ 				}
+ 			}
+ 			arrayIn.close();
+ 			File file = new File("/data/data/edu.crabium.android.life/array");
+ 			file.delete();
+ 		}
+ 		catch(Exception e){
+ 		}
+ 		
+		SharedPreferences settings = context.getSharedPreferences("Life", 0);
+		
+		heroPositionX = settings.getInt("heroPositionX", heroPositionX);
+		heroPositionY = settings.getInt("heroPositionY", heroPositionY);
+		speed = settings.getInt("speed", speed);
+		offsetMod = settings.getInt("offsetMod", offsetMod);
+		prevBackPillarEnd = settings.getInt("prevBackPillarEnd", prevBackPillarEnd);
+		prevPillarEnd = settings.getInt("prevPillarEnd", prevPillarEnd);
+		prevCloudEnd = settings.getInt("prevCloudEnd", prevCloudEnd);
+		prevGroundEnd = settings.getInt("prevGroundEnd", prevGroundEnd);
+		prevGrassEnd = settings.getInt("prevGrassEnd", prevGrassEnd);
+		prevBushEnd = settings.getInt("prevBushEnd", prevBushEnd);
+		prevTreeEnd = settings.getInt("prevTreeEnd", prevTreeEnd);
+		prevBrickEnd = settings.getInt("prevBrickEnd", prevBrickEnd);
+		
+		lastBrickOffset = settings.getInt("lastBrickOffset", lastBrickOffset);
+		lastCloudOffset = settings.getInt("lastCloudOffset", lastCloudOffset);
+		lastPillarOffset = settings.getInt("lastPillarOffset", lastPillarOffset);
+		lastPillarOffsetTmp = settings.getInt("lastPillarOffsetTmp", lastPillarOffsetTmp);
+		pillarDrawn = settings.getBoolean("pillarDrawn", pillarDrawn);
+		lastBackPillarOffset = settings.getInt("lastBackPillarOffset", lastBackPillarOffset);
+		lastBushOffset = settings.getInt("lastBushOffset", lastBushOffset);
+		lastTreeOffset = settings.getInt("lastTreeOffset", lastTreeOffset);
+		
+		float previousPillarPositionX  = settings.getFloat("previousPillarPositionX", 0);
+		float previousPillarPositionY  = settings.getFloat("previousPillarPositionY", 0);
+		
+		if(previousPillarPositionX != 0 || previousPillarPositionY != 0){
+ 			previousPillarPosition = new PillarPosition(
+ 					previousPillarPositionX, 
+ 					previousPillarPositionY);
+		}
+ 	}
+ 	
+ 	private void saveLifeData(){
+ 		try {
+ 			FileOutputStream stageOut = new FileOutputStream("/data/data/edu.crabium.android.life/stage");
+ 			stage.compress(Bitmap.CompressFormat.PNG, 90, stageOut);
+ 			stageOut.close();
+ 			
+ 			PrintWriter arrayOut = new PrintWriter("/data/data/edu.crabium.android.life/array");
+ 			arrayOut.println(blockArray.length);
+ 			arrayOut.println(blockArray[0].length);
+ 			for(int i = 0; i < blockArray.length; i ++){
+ 				for(int j = 0; j < blockArray[0].length; j++){
+ 					arrayOut.println(blockArray[i][j].toString());
+ 				}
+ 			}
+ 			
+ 			SharedPreferences settings = context.getSharedPreferences("Life", 0);
+ 			SharedPreferences.Editor editor = settings.edit();
+ 			
+ 			editor.putInt("heroPositionX",heroPositionX);
+ 			editor.putInt("heroPositionY",heroPositionY);
+ 			editor.putInt("speed",speed);
+ 			editor.putInt("offsetMod",offsetMod);
+ 			editor.putInt("prevBackPillarEnd",prevBackPillarEnd);
+ 			editor.putInt("prevPillarEnd",prevPillarEnd);
+ 			editor.putInt("prevCloudEnd",prevCloudEnd);
+ 			editor.putInt("prevGroundEnd",prevGroundEnd);
+ 			editor.putInt("prevGrassEnd",prevGrassEnd);
+ 			editor.putInt("prevBushEnd",prevBushEnd);
+ 			editor.putInt("prevTreeEnd",prevTreeEnd);
+ 			editor.putInt("prevBrickEnd",prevBrickEnd);
+ 			
+ 			editor.putInt("lastBrickOffset",lastBrickOffset);
+ 			editor.putInt("lastCloudOffset",lastCloudOffset);
+ 			editor.putInt("lastPillarOffset",lastPillarOffset);
+ 			editor.putInt("lastPillarOffsetTmp",lastPillarOffsetTmp);
+ 			editor.putBoolean("pillarDrawn",pillarDrawn);
+ 			editor.putInt("lastBackPillarOffset",lastBackPillarOffset);
+ 			editor.putInt("lastBushOffset",lastBushOffset);
+ 			editor.putInt("lastTreeOffset",lastTreeOffset);
+ 			
+ 			editor.putFloat("previousPillarPositionX", (float) previousPillarPosition.getX());
+ 			editor.putFloat("previousPillarPositionY", (float) previousPillarPosition.getY());
+ 			
+ 			editor.commit();
+ 			arrayOut.close();
+	 	} catch (Exception e) {
+	 		e.printStackTrace();
+	 	}
+ 	}
+ 	
+ 	public ThreadState getThreadState(){
+ 		return threadState;
+ 	}
+ 	
+ 	public LifeSurfaceViewThread getThread(){
+ 		return thread;
+ 	}
+ 	
 	public LifeSurfaceView(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		
 		holder = getHolder();
 		holder.addCallback(this);
-		thread = new LifeSurfaceViewThread(holder, context);
 		this.context = context;
 	}
 
@@ -338,54 +506,50 @@ public class LifeSurfaceView extends SurfaceView
 			int height) {
 	}
 
-	
-	int prevBackPillarEnd;
-	int prevPillarEnd;
-	int prevCloudEnd;
-	int prevGroundEnd;
-	int prevGrassEnd;
-	int prevBushEnd;
-	int prevTreeEnd;
-	int prevBrickEnd;
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
 		initializeConstant(context);
 		
-		blockArray = new Brick[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
-		for(int i = 0; i < blockArray.length; i++)
-			for(int j = 0; j < blockArray[i].length; j++)
-				blockArray[i][j] = Brick.NONE;
+		if(blockArray == null){
+			blockArray = new Brick[BLOCK_NUMBER_X][BLOCK_NUMBER_Y];
+			for(int i = 0; i < blockArray.length; i++)
+				for(int j = 0; j < blockArray[i].length; j++)
+					blockArray[i][j] = Brick.NONE;
+		}
+		columnList = new LinkedList<PriorityQueue<SceneTile>>();
+		for(int i = 0; i < BLOCK_NUMBER_X; i ++){
+			columnList.add(new PriorityQueue<SceneTile>());
+		}
 		
-		prevBrickEnd = generateRandomBrick(0, blockArray, 0);
-			
+		prevBrickEnd = generateRandomBrick(prevBrickEnd, blockArray, 0);
+		
 		Canvas canvas = new Canvas(stage);
-		Paint backGroundPaint = new Paint();
-		backGroundPaint.setColor(BACK_GROUND_COLOR);
-		canvas.drawRect(
-				(float)0.0, 
-				(float)0.0, 
-				(float)stage.getWidth(), 
-				(float)stage.getHeight(), 
-				backGroundPaint);
+		prevBackPillarEnd = drawBackPillarAndShade(
+				canvas, 
+				(int)(prevBackPillarEnd), 
+				stage.getWidth(), 
+				speed);
 		
-		prevBackPillarEnd = drawBackPillarAndShade(canvas, BACK_PILLAR_WIDTH /2, stage.getWidth(), 0);
-		
-		prevPillarEnd = drawPillar(canvas, 0, prevBackPillarEnd, 0);
+		int prevPillarEndTmp = prevPillarEnd;
+		prevPillarEnd = drawPillar(canvas, prevPillarEnd, prevBackPillarEnd, speed);
 
-		prevCloudEnd = drawCloudAndShade(canvas, 0, prevBackPillarEnd, 0);
+		prevCloudEnd = drawCloudAndShade(canvas, prevCloudEnd, prevBackPillarEnd, speed);
 		
-		prevGroundEnd = drawGroundAndSubterranean(canvas, 0, prevPillarEnd, 0);
+		prevGroundEnd = drawGroundAndSubterranean(canvas, prevGroundEnd, prevPillarEndTmp, speed );
 		
-		prevGrassEnd = drawGrass(canvas, 0, prevPillarEnd, 0);
+		prevGrassEnd = drawGrass(canvas, prevGrassEnd, prevPillarEndTmp, speed);
 		
-		prevBushEnd = drawBush(canvas, 0, prevPillarEnd, 0);
+		prevBushEnd = drawBush(canvas, prevBushEnd, prevPillarEndTmp, speed);
 		
-		prevTreeEnd = drawTree(canvas, 0, prevBushEnd, 0);
+		prevTreeEnd = drawTree(canvas, prevTreeEnd, prevBushEnd - lastPillarOffset, speed);
 		
-		thread.start();
+		if(threadState != ThreadState.RUNNING){
+			thread = new LifeSurfaceViewThread(holder, context);
+			threadState = ThreadState.RUNNING;
+			thread.start();
+		}
 	}
 	
-	int lastBrickOffset;
 	private int generateRandomBrick(int start, Brick[][] array, int offset) {
 		int result = start;
 		lastBrickOffset += offset;
@@ -394,7 +558,6 @@ public class LifeSurfaceView extends SurfaceView
 		
 		start = (int) (Math.floor(start - lastBrickOffset) / BRICK_WIDTH);
 		for(int i = start; i < array.length - RANDOM_BRICK_COUNT_MAX; i++){
-			Random rand = new Random();
 			if(randomBrickOn){
 				lastBrickOffset = 0;
 				
@@ -412,6 +575,7 @@ public class LifeSurfaceView extends SurfaceView
 				Log.d("Life", "brickPattern:" + brickPattern);
 				
 				for(int j = 0; j < randomBricksRemain; j++){
+					Log.d("Life", "i = " + i + ", j = " + j);
 					array[i + j][randomBrickBlockHeight] = 
 							Integer.valueOf(brickPattern.substring(j,j+1)) == 1 ? Brick.BROWN : Brick.YELLOW;
 				}
@@ -429,10 +593,8 @@ public class LifeSurfaceView extends SurfaceView
 		return result;
 	}
 
-	int lastCloudOffset;
 	private int drawCloudAndShade(Canvas canvas, int start, int end, int offset) {
 		lastCloudOffset += offset;
-		Random rand = new Random();
 		int result = start;
 		/*
 		 * Draw clouds
@@ -480,14 +642,10 @@ public class LifeSurfaceView extends SurfaceView
 		return result;
 	}
 
-	int lastPillarOffset;
-	int lastPillarOffsetTmp;
-	boolean pillarDrawn = false;
 	private int drawPillar(Canvas canvas, int start, int end, int offset) {
 		lastPillarOffset += offset;
 		lastPillarOffsetTmp += offset;
 		int result = start;
-		Random rand = new Random();
 		/*
 		 * Draw pillars
 		 */
@@ -526,8 +684,6 @@ public class LifeSurfaceView extends SurfaceView
 		return result;
 	}
 
-
-	PillarPosition previousPillarPosition;
 	/**
 	 * 
 	 * @param canvas
@@ -537,13 +693,11 @@ public class LifeSurfaceView extends SurfaceView
 	 * @return Ending position
 	 */
 
-	int  lastBackPillarOffset;
 	private int drawBackPillarAndShade(Canvas canvas, int start, int end, int offset) {
 		lastBackPillarOffset += offset;
 		
 		int result = start;
 		boolean drawn = false;
-		Random rand = new Random();
 		
 		/*
 		 * Draw back pillars' shade
@@ -636,11 +790,16 @@ public class LifeSurfaceView extends SurfaceView
 	}
 	
 	private void initializeConstant(Context context){
-		BRICK_HEIGHT = Integer.valueOf( 
-			context.getResources().
+		heroPositionX = Integer.valueOf(context.getResources().
+				getString(R.string.hero_position_x));
+		
+		heroPositionY = Integer.valueOf(context.getResources().
+				getString(R.string.hero_position_y));
+		
+		BRICK_HEIGHT = Integer.valueOf(context.getResources().
 			getString(R.string.brick_height));
-		BRICK_WIDTH = Integer.valueOf( 
-			context.getResources().
+		
+		BRICK_WIDTH = Integer.valueOf(context.getResources().
 			getString(R.string.brick_width));
 		
 		BROWN_BRICK_THRESHOLD = Double.valueOf(
@@ -682,6 +841,8 @@ public class LifeSurfaceView extends SurfaceView
 			BACK_PILLAR_WIDTH * Double.valueOf(context.getResources().
 			getString(R.string.back_pillar_shade_width_ratio));
 		
+		// yes, use BACK_PILLAR_WIDTH, not BACK_PILLAR_HEIGHT
+		// although we're calculating height offset
 		BACK_PILLAR_SHADE_HEIGHT_OFFSET = 
 			BACK_PILLAR_WIDTH * Double.valueOf(context.getResources().
 			getString(R.string.back_pillar_shade_height_ratio));
@@ -755,7 +916,7 @@ public class LifeSurfaceView extends SurfaceView
 		
 		GROUND_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
-				getString(R.string.ground_ratio));
+				getString(R.string.ground_height_ratio));
 		
 		GROUND_SECTION_HEIGHT = BITMAP_HEIGHT * Double.valueOf(
 				context.getResources().
@@ -773,7 +934,7 @@ public class LifeSurfaceView extends SurfaceView
 				context.getResources().
 				getString(R.string.grass_space));
 		
-		TREE_CROWN_WIDTH = BITMAP_HEIGHT * Double.valueOf(
+		TREE_CROWN_WIDTH = BITMAP_WIDTH * Double.valueOf(
 				context.getResources().
 				getString(R.string.tree_crown_width_ratio));
 		
@@ -785,7 +946,7 @@ public class LifeSurfaceView extends SurfaceView
 				context.getResources().
 				getString(R.string.trunk_height_ratio));
 		
-		TRUNK_WIDTH= BITMAP_HEIGHT * Double.valueOf(
+		TRUNK_WIDTH= BITMAP_WIDTH * Double.valueOf(
 				context.getResources().
 				getString(R.string.trunk_width_ratio));
 		
@@ -835,6 +996,7 @@ public class LifeSurfaceView extends SurfaceView
 				
 		double stageWidth =
 				BITMAP_WIDTH +
+				RANDOM_BRICK_COUNT_MAX * BRICK_WIDTH +
 				BACK_PILLAR_WIDTH * 2 + 
 				PILLAR_WIDTH + BUSH_WIDTH * 3 + 
 				TREE_CROWN_WIDTH + 
@@ -845,6 +1007,11 @@ public class LifeSurfaceView extends SurfaceView
 				BITMAP_HEIGHT, 
 				Bitmap.Config.ARGB_8888);
 		
+		Paint backGroundPaint = new Paint();
+		Canvas canvas = new Canvas(stage);
+		backGroundPaint.setColor(BACK_GROUND_COLOR);
+		canvas.drawRect(0, 0, stage.getWidth(), stage.getHeight(), backGroundPaint);
+		
 		stageWithBricks = Bitmap.createBitmap(
 				stage.getWidth(),
 				stage.getHeight(),
@@ -852,12 +1019,14 @@ public class LifeSurfaceView extends SurfaceView
 		
 		BLOCK_NUMBER_X = (int) ( stage.getWidth() / BRICK_WIDTH);
 		BLOCK_NUMBER_Y = (int) ( stage.getHeight() / BRICK_HEIGHT);
+		
+		threadState = ThreadState.STOPPED;
+		
+		retrieveLifeData();
 	}
 
-	int lastBushOffset;
 	private int drawBush(Canvas canvas, int start, int end, int offset){
 		lastBushOffset += offset;
-		Random rand = new Random();
 		int result = start;
 		
 		start = (int) (start - lastBushOffset
@@ -987,10 +1156,8 @@ public class LifeSurfaceView extends SurfaceView
 		return result;
 	}
 	
-	int lastTreeOffset;
 	private int drawTree(Canvas canvas, int start, int end, int offset){
 		lastTreeOffset += offset;
-		Random rand = new Random();
 		int result = start;
 		
 		start = (int) (start - lastTreeOffset
@@ -1094,7 +1261,6 @@ public class LifeSurfaceView extends SurfaceView
 		start = start - lastPillarOffsetTmp;
 		
 		for(int i = start; i < end; i ++){
-			Random rand = new Random();
 			// Max, from the lower left corner
 			float grassHeightMax = (float) (stage.getHeight() - SUBTERRANEAN_HEIGHT - GROUND_SECTION_HEIGHT - GROUND_HEIGHT);
 			float grassHeightMin = (float) (grassHeightMax + GROUND_HEIGHT - GRASS_HEIGHT);
@@ -1241,6 +1407,7 @@ public class LifeSurfaceView extends SurfaceView
 		Drawable brownTile = context.getResources().getDrawable(R.drawable.tile_brown);
 		Bitmap yellowBitmap = ((BitmapDrawable)yellowTile).getBitmap();
 		Bitmap brownBitmap = ((BitmapDrawable)brownTile).getBitmap();
+		//Canvas canvas = new Canvas(stage);
 		Canvas canvas = new Canvas(stageWithBricks);
 		for(int i = (int)Math.floor(start / BRICK_WIDTH); 
 				i < (int)Math.ceil((start + BITMAP_WIDTH)/ BRICK_WIDTH + 2);
@@ -1283,6 +1450,10 @@ public class LifeSurfaceView extends SurfaceView
 		int y2 = y1 + HERO_HEIGHT;
 		RectF hDest = new RectF(x1, y1, x2, y2);
 		canvas.drawBitmap(heroBitmap, null, hDest, null);
+	}
+
+	public void saveState(Bundle bundle) {
+		bundle.putString("hi", "there");
 	}
 
 }
