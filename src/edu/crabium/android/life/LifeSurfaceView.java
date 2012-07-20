@@ -42,7 +42,7 @@ public class LifeSurfaceView extends SurfaceView
 	private Bitmap stageWithBricks;
 	private int heroPositionX;
 	private int heroPositionY;
-	private int speed = 4;
+	private int speed = 16;
 	
 	private int offsetMod;
 	private ThreadState threadState;
@@ -68,10 +68,14 @@ public class LifeSurfaceView extends SurfaceView
 	
 	private int BACK_GROUND_COLOR = 0xff9bc3cf;
 	private int GROUND_COLOR = 0xffced852;
-	private int GROUND_SECTION_COLOR = 0xffb3b827;
-	private int GROUND_BORDER_COLOR = 0xff8c8302;
-	private int SUBTERRANEAN_COLOR = 0xffea9506;
-	private int GRASS_COLOR = 0xff54540e;
+	//private int GROUND_SECTION_COLOR = 0xffb3b827;
+	//private int GROUND_BORDER_COLOR = 0xff8c8302;
+	//private int SUBTERRANEAN_COLOR = 0xffea9506;
+	private int GROUND_SECTION_COLOR = 0xff3266db;
+	private int GROUND_BORDER_COLOR = 0xff3266db;
+	private int SUBTERRANEAN_COLOR = 0xff3266db;
+	//private int GRASS_COLOR = 0xff54540e;
+	private int GRASS_COLOR = 0xff678ee8;
 	private int TRUNK_COLOR = 0xff4c4238;
 	
 	private double GROUND_HEIGHT;
@@ -135,9 +139,11 @@ public class LifeSurfaceView extends SurfaceView
 
 	private double BRICK_HEIGHT;
 	private double BRICK_WIDTH;
+	private double BRICK_HEIGHT_OFFSET;
 	private double BRICK_SHADE_HEIGHT_OFFSET;
 	private double BRICK_SHADE_WIDTH_OFFSET;
 	private double BROWN_BRICK_THRESHOLD;
+	
 	
 	private int HERO_SHADE_ALPHA = 60;
 	private int BACK_PILLAR_SHADE_ALPHA = 30;
@@ -218,12 +224,6 @@ public class LifeSurfaceView extends SurfaceView
 						columnList.add(new PriorityQueue<SceneTile>());
 					}
 					
-//					synchronized(columnMagic){
-//						for(int i = 0; i < columnMagic.length - 1;i ++){
-//							columnMagic[i] = columnMagic[i + 1];
-//						}
-//						columnMagic[columnMagic.length] = rand.nextInt();
-//					}
 				}
 				/*
 				 * shift stage
@@ -286,7 +286,7 @@ public class LifeSurfaceView extends SurfaceView
 		private void updateHero(){
 			if( (speed % BRICK_WIDTH) == 0){
 				int x = (int) ((heroPositionX + speed) / BRICK_WIDTH);
-				int y = (int) ((BITMAP_HEIGHT - heroPositionY) / BRICK_HEIGHT);
+				int y = (int) ((BITMAP_HEIGHT - heroPositionY) / BRICK_HEIGHT + BRICK_HEIGHT_OFFSET);
 				
 				if( ( y < (BITMAP_HEIGHT / BRICK_HEIGHT - 1 ) ) && blockArray[x][y+1] == Brick.NONE)
 					heroPositionY -= BRICK_HEIGHT;
@@ -303,33 +303,37 @@ public class LifeSurfaceView extends SurfaceView
 			if(event.getAction() == MotionEvent.ACTION_MOVE ||
 					event.getAction() == MotionEvent.ACTION_DOWN){
 				synchronized(blockArray){
-					
-					float x = event.getX();
-					float y = event.getY();
-					Log.d("Life", "[onTouchEvent] x = " + x + ", y = " + y);
-					
-					int blockX = (int) Math.floor((x + offsetMod)/BRICK_WIDTH);
-					int blockY = (int) Math.floor(y/BRICK_HEIGHT);
-					Log.d("Life", "[onTouchEvent] blockX = " + blockX + ", blockY = " + blockY);
-					
-					int prevBlockX = (int) Math.floor((prevX + offsetMod)/BRICK_WIDTH);
-					int prevBlockY = (int) Math.floor(prevY/BRICK_HEIGHT);
-					if(blockX != prevBlockX || blockY != prevBlockY){
-						prevX = (int) x;
-						prevY = (int) y;
+					for(int pointId = 0; pointId < event.getPointerCount(); pointId ++){
+						float x = event.getX(pointId);
+						float y = event.getY(pointId);
+						Log.d("Life", "[onTouchEvent] x = " + x + ", y = " + y);
 						
-						if(blockArray[blockX][blockY] == Brick.YELLOW)
-								blockArray[blockX][blockY] = Brick.NONE;
-						else if(blockArray[blockX][blockY] != Brick.BROWN){
-							if(rand.nextDouble() >= BROWN_BRICK_THRESHOLD)
-								blockArray[blockX][blockY] = Brick.BROWN;
-							else
-								blockArray[blockX][blockY] = Brick.YELLOW;
+						int blockX = (int) Math.floor((x + offsetMod)/BRICK_WIDTH);
+						int blockY = (int) Math.floor((y - BRICK_HEIGHT_OFFSET)/BRICK_HEIGHT);
+						if(blockY < 0 || blockY >= BLOCK_NUMBER_Y)
+							continue;
+						
+						Log.d("Life", "[onTouchEvent] blockX = " + blockX + ", blockY = " + blockY);
+						
+						int prevBlockX = (int) Math.floor((prevX + offsetMod)/BRICK_WIDTH);
+						int prevBlockY = (int) Math.floor((prevY - BRICK_HEIGHT_OFFSET)/BRICK_HEIGHT);
+						if(blockX != prevBlockX || blockY != prevBlockY){
+							prevX = (int) x;
+							prevY = (int) y;
+							
+							if(blockArray[blockX][blockY] == Brick.YELLOW)
+									blockArray[blockX][blockY] = Brick.NONE;
+							else if(blockArray[blockX][blockY] != Brick.BROWN){
+								if(rand.nextDouble() >= BROWN_BRICK_THRESHOLD)
+									blockArray[blockX][blockY] = Brick.BROWN;
+								else
+									blockArray[blockX][blockY] = Brick.YELLOW;
+							}
 						}
-					}
-					else{
-						Log.d("Life", "[onTouchEvent] prevBlockX = " + prevBlockX +
-								", prevBlockY = " + prevBlockY);
+						else{
+							Log.d("Life", "[onTouchEvent] prevBlockX = " + prevBlockX +
+									", prevBlockY = " + prevBlockY);
+						}
 					}
 				}
 			}
@@ -1017,8 +1021,14 @@ public class LifeSurfaceView extends SurfaceView
 				stage.getHeight(),
 				Bitmap.Config.ARGB_8888);
 		
+		
+		double availableHeight = BITMAP_HEIGHT - (SUBTERRANEAN_HEIGHT + GROUND_SECTION_HEIGHT);
+		double bricksHeight = Math.floor(availableHeight / BRICK_HEIGHT)*BRICK_HEIGHT;
+		
+		BRICK_HEIGHT_OFFSET = availableHeight - bricksHeight;
+		
 		BLOCK_NUMBER_X = (int) ( stage.getWidth() / BRICK_WIDTH);
-		BLOCK_NUMBER_Y = (int) ( stage.getHeight() / BRICK_HEIGHT);
+		BLOCK_NUMBER_Y = (int) ( ( stage.getHeight() - BRICK_HEIGHT_OFFSET ) / BRICK_HEIGHT );
 		
 		threadState = ThreadState.STOPPED;
 		
@@ -1368,7 +1378,7 @@ public class LifeSurfaceView extends SurfaceView
 			for(int j = 0; j < blockArray[i].length; j++){
 				if(blockArray[i][j] != Brick.NONE){
 					int x1 = (int) (i * BRICK_WIDTH - BRICK_SHADE_WIDTH_OFFSET - offset);
-					int y1 = (int) (j * BRICK_HEIGHT + BRICK_SHADE_HEIGHT_OFFSET);
+					int y1 = (int) (j * BRICK_HEIGHT + BRICK_SHADE_HEIGHT_OFFSET + BRICK_HEIGHT_OFFSET);
 					int x2 = (int) (x1 + BRICK_WIDTH);
 					int y2 = (int) (y1 + BRICK_HEIGHT);
 					
@@ -1392,7 +1402,11 @@ public class LifeSurfaceView extends SurfaceView
 		Paint heroShadePaint = new Paint();
 		heroShadePaint.setAlpha(HERO_SHADE_ALPHA);
 		double sx1 = startx + heroPositionX - (HERO_WIDTH - BRICK_WIDTH)/2 - HERO_SHADE_WIDTH_OFFSET;
-		double sy1 = (BITMAP_HEIGHT - heroPositionY) + BRICK_HEIGHT - HERO_HEIGHT + HERO_SHADE_HEIGHT_OFFSET;
+		double sy1 = 
+				(BITMAP_HEIGHT - heroPositionY) + 
+				BRICK_HEIGHT - HERO_HEIGHT + 
+				HERO_SHADE_HEIGHT_OFFSET + 
+				BRICK_HEIGHT_OFFSET;
 		double sx2 = sx1 + HERO_WIDTH;
 		double sy2 = sy1 + HERO_HEIGHT;
 		RectF hsDest = new RectF((float)sx1, (float)sy1, (float)sx2, (float)sy2);
@@ -1416,9 +1430,9 @@ public class LifeSurfaceView extends SurfaceView
 				if(blockArray[i][j] != Brick.NONE){
 					RectF rDest = new RectF(
 							(float)(i*BRICK_WIDTH - offset), 
-							(float)(j*BRICK_HEIGHT),
+							(float)(j*BRICK_HEIGHT + BRICK_HEIGHT_OFFSET),
 							(float)((i+1)*BRICK_WIDTH - offset), 
-							(float)((j+1)*BRICK_HEIGHT)  
+							(float)((j+1)*BRICK_HEIGHT + BRICK_HEIGHT_OFFSET)  
 							);
 					
 					if(blockArray[i][j] == Brick.BROWN )
@@ -1445,7 +1459,10 @@ public class LifeSurfaceView extends SurfaceView
 		Drawable heroTile = context.getResources().getDrawable(R.drawable.hero);
 		Bitmap heroBitmap = ((BitmapDrawable)heroTile).getBitmap();
 		int x1 = (int) (heroPositionX - (HERO_WIDTH - BRICK_WIDTH) / 2);
-		int y1 = (int) ((BITMAP_HEIGHT -heroPositionY) + BRICK_HEIGHT - HERO_HEIGHT);
+		int y1 = (int) (
+				(BITMAP_HEIGHT -heroPositionY) + 
+				BRICK_HEIGHT - HERO_HEIGHT + 
+				BRICK_HEIGHT_OFFSET);
 		int x2 = x1 + HERO_WIDTH;
 		int y2 = y1 + HERO_HEIGHT;
 		RectF hDest = new RectF(x1, y1, x2, y2);
