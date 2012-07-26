@@ -4,16 +4,21 @@
     <string name="hello">Hello World, LifeActivity!</string>
     <string name="app_name">Life</string>
 	
-	<string name="brick_height">32</string>
-	<string name="brick_width">32</string>
+	<string name="brick_height_">32</string>
+	<string name="brick_width_">32</string>
+	
 	<string name="brown_brick_threshold">0.75</string>
 	<string name="brick_shade_height_offset_ratio">0.5</string>
 	<string name="brick_shade_width_offset_ratio">0.5</string>
 	
+	<string name="dark_cloud_threshold">0.1</string>
+	<string name="dark_cloud_height_max">1.0</string>
+	<string name="dark_cloud_height_min">0.5</string>
+	
 	<string name="hero_height">96</string>
 	<string name="hero_width">50</string>
-	<string name="hero_position_x">4</string>
-	<string name="hero_position_y">2</string>
+	<string name="hero_position_x">1</string>
+	<string name="hero_position_y">1</string>
 	<string name="hero_shade_height_offset_ratio">0.5</string>
 	<string name="hero_shade_width_offset_ratio">0.5</string>
 	
@@ -54,6 +59,7 @@
 	<string name="trunk_height_ratio">0.05667</string>
 	<string name="trunk_width_ratio">0.0037</string>
 	<string name="tree_space_count">6</string>
+	<string name="tree_threshold">0.5</string>
 	<string name="tree_shade_angle">30</string>
 	<string name="tree_crown_shade_height_offset_ratio">0.33</string>
 	
@@ -65,4 +71,9 @@
 	<string name="bush_shade_height_offset_ratio">0.25</string>
 	<string name="bush_shade_width_offset_ratio">0.25</string>
 	<string name="bush_space_count">6</string>
+	<string name="bush_threshold">0.5</string>
+	
+	<string name="pool_width_min_ratio">0.2</string>
+	<string name="pool_width_max_ratio">0.5</string>
+	<string name="pool_threshold">0.98</string>
 </resources>

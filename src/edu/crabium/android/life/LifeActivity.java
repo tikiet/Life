@@ -25,13 +25,28 @@ public class LifeActivity extends Activity {
         DisplayMetrics displaymetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
         
+        
         setContentView(R.layout.main);
         lifeSurfaceView = (LifeSurfaceView)findViewById(R.id.surfaceView1);
         lifeSurfaceView.setHeight(displaymetrics.heightPixels);
         lifeSurfaceView.setWidth(displaymetrics.widthPixels);
         
-        //lifeSurfaceView.setThreadState(ThreadState.RUNNING);
-        
+        int density =  getResources().getDisplayMetrics().densityDpi;
+        Log.d("Life","density:"+density);
+        if(displaymetrics.heightPixels > 800){
+        	lifeSurfaceView.setBrickHeight(64);
+        	lifeSurfaceView.setBrickWidth(64);
+        }else if(displaymetrics.heightPixels > 600){
+        	lifeSurfaceView.setBrickHeight(48);
+        	lifeSurfaceView.setBrickWidth(48);
+        }else if(displaymetrics.heightPixels > 400){
+        	lifeSurfaceView.setBrickHeight(32);
+        	lifeSurfaceView.setBrickWidth(32);
+        }else{
+        	lifeSurfaceView.setBrickHeight(24);
+        	lifeSurfaceView.setBrickWidth(24);
+        }
+        	
         if(savedInstanceState != null){
         	Log.d("Life","SavedInstanceState not null");
         	//lifeSurfaceView.setThreadState(ThreadState.RECOVER);
@@ -47,12 +62,5 @@ public class LifeActivity extends Activity {
     public void onPause(){
     	super.onPause();
     	lifeSurfaceView.setThreadState(ThreadState.STOPPED);
-    }
-    
-    @Override
-    public void onSaveInstanceState(Bundle bundle){
-    	super.onSaveInstanceState(bundle);
-    	lifeSurfaceView.saveState(bundle);
-    	Log.d("Life", "onSIS called");
     }
 }
