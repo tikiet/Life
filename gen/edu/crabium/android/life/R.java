@@ -28,13 +28,16 @@ public final class R {
         public static final int rain=0x7f02000e;
         public static final int restart=0x7f02000f;
         public static final int shade=0x7f020010;
-        public static final int tile=0x7f020011;
-        public static final int tile_brown=0x7f020012;
-        public static final int tile_yellow=0x7f020013;
-        public static final int tree_crown=0x7f020014;
-        public static final int tree_crown_shade=0x7f020015;
-        public static final int umbrella=0x7f020016;
-        public static final int xbg=0x7f020017;
+        public static final int springboard_closed=0x7f020011;
+        public static final int springboard_opened_1=0x7f020012;
+        public static final int springboard_opened_2=0x7f020013;
+        public static final int tile=0x7f020014;
+        public static final int tile_brown=0x7f020015;
+        public static final int tile_yellow=0x7f020016;
+        public static final int tree_crown=0x7f020017;
+        public static final int tree_crown_shade=0x7f020018;
+        public static final int umbrella=0x7f020019;
+        public static final int xbg=0x7f02001a;
     }
     public static final class id {
         public static final int surfaceView1=0x7f050000;
@@ -71,6 +74,7 @@ public final class R {
         public static final int cloud_space_ratio=0x7f04001e;
         public static final int cloud_width_max=0x7f04001c;
         public static final int cloud_width_min=0x7f04001d;
+        public static final int cone_space_count=0x7f040040;
         public static final int dark_cloud_height_max=0x7f040008;
         public static final int dark_cloud_height_min=0x7f040009;
         public static final int dark_cloud_threshold=0x7f040007;
@@ -85,10 +89,11 @@ public final class R {
         public static final int hero_shade_height_offset_ratio=0x7f04000e;
         public static final int hero_shade_width_offset_ratio=0x7f04000f;
         public static final int hero_width=0x7f04000b;
-        public static final int pillar_height_max=0x7f040011;
-        public static final int pillar_height_min=0x7f040012;
+        public static final int pillar_height_max_ratio=0x7f040011;
+        public static final int pillar_height_min_ratio=0x7f040012;
         public static final int pillar_space=0x7f040013;
         public static final int pillar_width=0x7f040010;
+        public static final int pool_space_count=0x7f04003f;
         public static final int pool_threshold=0x7f04003e;
         public static final int pool_width_max_ratio=0x7f04003d;
         public static final int pool_width_min_ratio=0x7f04003c;
