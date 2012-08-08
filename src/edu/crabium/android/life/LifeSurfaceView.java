@@ -250,8 +250,6 @@ public class LifeSurfaceView extends SurfaceView
 				canvas.drawBitmap(stageWithBricks, rSrc, rDest, null);
 				holder.unlockCanvasAndPost(canvas);
 				
-				//threadState = ThreadState.STOPPED;
-				//Log.d("Life", Arrays.toString(groundArray));
 				prevX -= heroSpeedX;
 				
 				offsetMod = (int) ((offsetMod + heroSpeedX) % BRICK_WIDTH);
@@ -328,6 +326,30 @@ public class LifeSurfaceView extends SurfaceView
 		}
  
 		public boolean onTouchEvent(MotionEvent event) {
+			if(event.getAction() == MotionEvent.ACTION_DOWN){
+				if(duckyCountRectF.contains(event.getX(), event.getY()) &&
+					duckyCount > 0){
+					usingDuck = true;
+					duckStartTime = System.currentTimeMillis();
+					duckyCount --;
+					return true;
+				}
+				else if(passportCountRectF.contains(event.getX(), event.getY()) &&
+					passportCount > 0){
+					usingPassport = true;
+					passportStartTime = System.currentTimeMillis();
+					passportCount --;
+					return true;
+				}
+				else if(umbrellaCountRectF.contains(event.getX(), event.getY()) &&
+					umbrellaCount > 0){
+					usingUmbrella = true;
+					umbrellaStartTime = System.currentTimeMillis();
+					umbrellaCount --;
+					return true;
+				}
+			}
+			
 			if(event.getAction() == MotionEvent.ACTION_MOVE ||
 					event.getAction() == MotionEvent.ACTION_DOWN){
 				synchronized(brickArray){
@@ -354,21 +376,12 @@ public class LifeSurfaceView extends SurfaceView
 								(brickArray[blockX][blockY] == Brick.PASSPORT) ||
 								(brickArray[blockX][blockY] == Brick.UMBRELLA)){
 								
-								if(brickArray[blockX][blockY] == Brick.DUCKY){
+								if(brickArray[blockX][blockY] == Brick.DUCKY)
 									duckyCount ++;
-									usingDuck = true;
-									duckStartTime = System.currentTimeMillis();
-								}
-								else if (brickArray[blockX][blockY] == Brick.PASSPORT){
+								else if (brickArray[blockX][blockY] == Brick.PASSPORT)
 									passportCount ++;
-									usingPassport = true;
-									passportStartTime = System.currentTimeMillis();
-								}
-								else if (brickArray[blockX][blockY] == Brick.UMBRELLA){
+								else if (brickArray[blockX][blockY] == Brick.UMBRELLA)
 									umbrellaCount ++;
-									usingUmbrella = true;
-									umbrellaStartTime = System.currentTimeMillis();
-								}
 								
 								brickArray[blockX][blockY] = Brick.NONE;
 							}
@@ -383,7 +396,9 @@ public class LifeSurfaceView extends SurfaceView
 									availableBrickCount --;
 									}
 								else if((blockY == brickArray[0].length -1) &&
-										(availableSpringboardCount > 0)){
+										(availableSpringboardCount > 0) &&
+										(groundArray[blockX] != Ground.POOL) &&
+										(groundArray[blockX] != Ground.POOL_DRAWN)){
 									brickArray[blockX][blockY] = Brick.SPRINGBOARD_CLOSED;
 									availableSpringboardCount --;
 								}
@@ -395,6 +410,9 @@ public class LifeSurfaceView extends SurfaceView
 						}
 					}
 				}
+			}
+			else if(event.getAction() == MotionEvent.ACTION_UP){
+				prevY = -1;
 			}
 			return true;
 		}
@@ -471,6 +489,7 @@ public class LifeSurfaceView extends SurfaceView
  		}
  	}
  	
+ 	boolean isAfterPausing;
  	private void retrieveLifeData(){
  		// Check whether all of the files are present
  		File stageFile = new File("/data/data/edu.crabium.android.life/stage");
@@ -478,6 +497,8 @@ public class LifeSurfaceView extends SurfaceView
  		File groundArrayFile = new File("/data/data/edu.crabium.android.life/groundArray");
  		if(!(stageFile.exists() && arrayFile.exists() && groundArrayFile.exists()))
  			return;
+ 		else
+ 			isAfterPausing = true;
  		
  		try{
  			FileInputStream stageIn = new FileInputStream("/data/data/edu.crabium.android.life/stage");
@@ -667,7 +688,7 @@ public class LifeSurfaceView extends SurfaceView
 	}
 	@Override
 	public boolean onTouchEvent(MotionEvent event){
-		if(event.getPointerCount() == 1 && threadState == ThreadState.STOPPED){
+		if(event.getPointerCount() == 1 && threadState == ThreadState.STOPPED && event.getAction() == MotionEvent.ACTION_DOWN){
 			if(restartDestRect.contains(event.getX(), event.getY())){
 				poolCoolingDistance = BITMAP_WIDTH / BRICK_WIDTH;
 				coneCoolingDistance = BITMAP_WIDTH / BRICK_WIDTH;
@@ -692,7 +713,7 @@ public class LifeSurfaceView extends SurfaceView
 				return true;
 			}
 		}
-		else if(event.getPointerCount() == 1 && threadState == ThreadState.READY){
+		else if(event.getPointerCount() == 1 && threadState == ThreadState.READY && event.getAction() == MotionEvent.ACTION_DOWN){
 			onStart();
 		}
 		
@@ -792,7 +813,7 @@ public class LifeSurfaceView extends SurfaceView
 		prevCloudEnd = drawCloudAndShade(canvas, prevCloudEnd, prevBackPillarEnd, heroSpeedX);
 
 		Log.d("Life", "prevPillarEnd - lastPillarOffset:"+ ( prevPillarEnd - lastPillarOffset));
-		drawGround(canvas, prevPillarEnd - lastPillarOffset, heroSpeedX );
+		drawGround(canvas, prevPillarEnd - lastPillarOffset, 0/*heroSpeedX*/ );
 		
 		prevGrassEnd = drawGrass(canvas, prevGrassEnd, prevPillarEndTmp, heroSpeedX);
 		
@@ -813,9 +834,16 @@ public class LifeSurfaceView extends SurfaceView
 		
 		initializeVariables(context);
 		initializeStage();
-		displayHome();
 		
-		threadState = ThreadState.READY;
+		if(isAfterPausing){
+			thread = new LifeSurfaceViewThread(holder, context);
+			threadState = ThreadState.RUNNING;
+			thread.start();
+		}
+		else{
+			displayHome();
+			threadState = ThreadState.READY;
+		}
 	}
 	
 	private void displayHome() {
@@ -1004,7 +1032,13 @@ public class LifeSurfaceView extends SurfaceView
 		
 	}
 	
+	RectF duckyCountRectF;
+	RectF umbrellaCountRectF;
+	RectF passportCountRectF;
+	RectF availableBrickCountRectF;
+	RectF availableSpringboardCountRectF;
 	private void drawGameInfo(Canvas canvas) {
+		int textSize = 0;
 		
 		// Display distance
 		Paint distancePaint = new Paint();
@@ -1012,107 +1046,113 @@ public class LifeSurfaceView extends SurfaceView
 		distancePaint.setColor(Color.WHITE);
 		distancePaint.setTextSize(BITMAP_WIDTH/20);
 		distancePaint.setTypeface(Typeface.MONOSPACE);
-		canvas.drawText(String.format("%05d", distance/4), BITMAP_HEIGHT/10 - BITMAP_WIDTH/20, BITMAP_HEIGHT/10, distancePaint);
+		canvas.drawText(String.format("%05dM", distance/4), BITMAP_HEIGHT/10 - BITMAP_WIDTH/20, BITMAP_HEIGHT/10, distancePaint);
+		
+		// Decide text size
+		Paint tmpPaint = new Paint();
+		tmpPaint.setTextAlign(Align.LEFT);
+		tmpPaint.setTypeface(Typeface.MONOSPACE);
+		for(int size = 1;; size++){
+			tmpPaint.setTextSize(size);
+			Rect tmpRect = new Rect();
+			tmpPaint.getTextBounds("00", 0, 2, tmpRect);
+			
+			if((tmpRect.width() > duckyCountRectF.width()*0.6) ||
+			   (tmpRect.height() > duckyCountRectF.height())){
+				textSize = size - 1;
+				Log.d("Life", "set text size to " + textSize);
+				break;
+			}
+		}
 		
 		// Display ducky info
 		Drawable duckyDrawable = context.getResources().getDrawable(R.drawable.ducky);
 		Bitmap duckyBitmap = ((BitmapDrawable)duckyDrawable).getBitmap();
-		
 		RectF duckyRectF = new RectF(
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20), 
-				(float)(BITMAP_HEIGHT / 10 + BITMAP_HEIGHT / 40),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 0.8 * BRICK_WIDTH),
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT));
+				duckyCountRectF.left + duckyCountRectF.width()*(float)0.7, 
+				duckyCountRectF.top + duckyCountRectF.height()/2, 
+				duckyCountRectF.right, duckyCountRectF.bottom);
 		canvas.drawBitmap(duckyBitmap, null, duckyRectF, null);
 				
 		Paint duckyPaint = new Paint();
 		duckyPaint.setAntiAlias(true);
 		duckyPaint.setColor(Color.WHITE);
-		duckyPaint.setTextSize(BITMAP_WIDTH/40);
+		duckyPaint.setTextSize(textSize);
 		duckyPaint.setTypeface(Typeface.MONOSPACE);
 		canvas.drawText(String.format("%02d", duckyCount),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 0.8 * BRICK_WIDTH), 
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT), 
+				duckyCountRectF.left, duckyCountRectF.bottom ,
 				duckyPaint);
 		
 		// Display umbrella info
 		Drawable umbrellaDrawable = context.getResources().getDrawable(R.drawable.umbrella);
 		Bitmap umbrellaBitmap = ((BitmapDrawable)umbrellaDrawable).getBitmap();
 		RectF umbrellaRectF = new RectF(
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 2 * BRICK_WIDTH), 
-				(float)(BITMAP_HEIGHT / 10 + BITMAP_HEIGHT / 40),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 0.8 * BRICK_WIDTH + 2 * BRICK_WIDTH),
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT));
+				umbrellaCountRectF.left + umbrellaCountRectF.width()*(float)0.7, 
+				umbrellaCountRectF.top + umbrellaCountRectF.height()/2, 
+				umbrellaCountRectF.right, umbrellaCountRectF.bottom);
 		canvas.drawBitmap(umbrellaBitmap, null, umbrellaRectF, null);
 		
 		Paint umbrellaPaint = new Paint();
 		umbrellaPaint.setAntiAlias(true);
 		umbrellaPaint.setColor(Color.WHITE);
-		umbrellaPaint.setTextSize(BITMAP_WIDTH/40);
+		umbrellaPaint.setTextSize(textSize);
 		umbrellaPaint.setTypeface(Typeface.MONOSPACE);
 		canvas.drawText(String.format("%02d", umbrellaCount),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 2 * BRICK_WIDTH + 0.8 * BRICK_WIDTH), 
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT), 
+				umbrellaCountRectF.left, umbrellaCountRectF.bottom,
 				umbrellaPaint);
 		
 		// Display passport info
 		Drawable passportDrawable = context.getResources().getDrawable(R.drawable.passport);
 		Bitmap passportBitmap = ((BitmapDrawable)passportDrawable).getBitmap();
 		RectF passportRectF = new RectF(
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 4 * BRICK_WIDTH), 
-				(float)(BITMAP_HEIGHT / 10 + BITMAP_HEIGHT / 40),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 0.8 * BRICK_WIDTH + 4 * BRICK_WIDTH),
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT));
+				passportCountRectF.left + passportCountRectF.width() *(float)0.7, 
+				passportCountRectF.top + passportCountRectF.height()/2, 
+				passportCountRectF.right, passportCountRectF.bottom);
 		canvas.drawBitmap(passportBitmap, null, passportRectF, null);
 		
 		Paint passportPaint = new Paint();
 		passportPaint.setAntiAlias(true);
 		passportPaint.setColor(Color.WHITE);
-		passportPaint.setTextSize(BITMAP_WIDTH/40);
+		passportPaint.setTextSize(textSize);
 		passportPaint.setTypeface(Typeface.MONOSPACE);
 		canvas.drawText(String.format("%02d", passportCount),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 4 * BRICK_WIDTH + 0.8 * BRICK_WIDTH), 
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT), 
+				passportCountRectF.left, passportCountRectF.bottom,
 				passportPaint);
 		
 		// Display available brick info
 		Drawable brickDrawable = context.getResources().getDrawable(R.drawable.tile_yellow);
 		Bitmap brickBitmap = ((BitmapDrawable)brickDrawable).getBitmap();
 		RectF brickRectF = new RectF(
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 6 * BRICK_WIDTH), 
-				(float)(BITMAP_HEIGHT / 10 + BITMAP_HEIGHT / 40),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 0.8 * BRICK_WIDTH + 6 * BRICK_WIDTH),
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT));
+				availableBrickCountRectF.left, availableBrickCountRectF.top,
+				availableBrickCountRectF.left + availableBrickCountRectF.width() / 2, availableBrickCountRectF.bottom);
 		canvas.drawBitmap(brickBitmap, null, brickRectF, null);
 		
 		Paint brickPaint = new Paint();
 		brickPaint.setAntiAlias(true);
 		brickPaint.setColor(Color.WHITE);
-		brickPaint.setTextSize(BITMAP_WIDTH/40);
+		brickPaint.setTextSize(textSize);
 		brickPaint.setTypeface(Typeface.MONOSPACE);
 		canvas.drawText(String.format("%02d", availableBrickCount),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 6 * BRICK_WIDTH + 0.8 * BRICK_WIDTH), 
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT), 
+				availableBrickCountRectF.left + availableBrickCountRectF.width()/2, 
+				availableBrickCountRectF.bottom,
 				brickPaint);
 		
 		// Display available springboard info
 		Drawable springboardDrawable = context.getResources().getDrawable(R.drawable.springboard_closed);
 		Bitmap springboardBitmap = ((BitmapDrawable)springboardDrawable).getBitmap();
 		RectF springboardRectF = new RectF(
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 8 * BRICK_WIDTH), 
-				(float)(BITMAP_HEIGHT / 10 + BITMAP_HEIGHT / 40),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 0.8 * BRICK_WIDTH + 8 * BRICK_WIDTH),
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT));
+				availableSpringboardCountRectF.left, availableSpringboardCountRectF.top,
+				availableSpringboardCountRectF.left + availableSpringboardCountRectF.width() / 2, availableSpringboardCountRectF.bottom);
 		canvas.drawBitmap(springboardBitmap, null, springboardRectF, null);
 		
 		Paint springboardPaint = new Paint();
 		springboardPaint.setAntiAlias(true);
 		springboardPaint.setColor(Color.WHITE);
-		springboardPaint.setTextSize(BITMAP_WIDTH/40);
+		springboardPaint.setTextSize(textSize);
 		springboardPaint.setTypeface(Typeface.MONOSPACE);
 		canvas.drawText(String.format("%02d", availableSpringboardCount),
-				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 8 * BRICK_WIDTH + 0.8 * BRICK_WIDTH), 
-				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT), 
+				availableSpringboardCountRectF.left + availableSpringboardCountRectF.width() / 2 , 
+				availableSpringboardCountRectF.bottom,
 				springboardPaint);
 	}
 
@@ -1866,6 +1906,35 @@ public class LifeSurfaceView extends SurfaceView
 					(float)(BITMAP_HEIGHT / 3 * 2+ (BITMAP_HEIGHT/3 - 2*BRICK_HEIGHT) / 2 + 2 * BRICK_WIDTH)
 					);
 			
+		duckyCountRectF = new RectF(
+				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20), 
+				(float)(BITMAP_HEIGHT / 10 + BITMAP_HEIGHT / 40),
+				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 1.6 * BRICK_WIDTH),
+				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT));
+		
+		umbrellaCountRectF = new RectF(
+				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 2 * BRICK_WIDTH), 
+				(float)(BITMAP_HEIGHT / 10 + BITMAP_HEIGHT / 40),
+				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 1.6 * BRICK_WIDTH + 2 * BRICK_WIDTH),
+				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT));
+				
+		passportCountRectF = new RectF(
+				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 4 * BRICK_WIDTH), 
+				(float)(BITMAP_HEIGHT / 10 + BITMAP_HEIGHT / 40),
+				(float)(BITMAP_HEIGHT/10 - BITMAP_WIDTH/20 + 1.6 * BRICK_WIDTH + 4 * BRICK_WIDTH),
+				(float)(BITMAP_HEIGHT / 10  + BITMAP_HEIGHT / 40 + 0.8 * BRICK_HEIGHT));
+		
+		availableBrickCountRectF = new RectF(
+				(float)(BITMAP_WIDTH * 6 / 8 ), 
+				(float)(BITMAP_HEIGHT / 30),
+				(float)(BITMAP_WIDTH * 6 / 8 + 1.6 * BRICK_WIDTH ),
+				(float)(BITMAP_HEIGHT / 30 + 0.8 * BRICK_HEIGHT));
+				
+		availableSpringboardCountRectF = new RectF(
+				(float)(BITMAP_WIDTH * 6 / 8), 
+				(float)(BITMAP_HEIGHT / 30 + 0.8 * BRICK_HEIGHT + BITMAP_HEIGHT / 30),
+				(float)(BITMAP_WIDTH * 6 / 8 + 1.6 * BRICK_WIDTH ),
+				(float)(BITMAP_HEIGHT / 30 + 0.8 * BRICK_HEIGHT + BITMAP_HEIGHT / 30 + 0.8 * BRICK_HEIGHT));
 		availableBrickCount = BITMAP_WIDTH / BRICK_WIDTH;
 		availableSpringboardCount = 5;
 		threadState = ThreadState.STOPPED;

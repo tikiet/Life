@@ -76,7 +76,7 @@
 	<string name="pool_width_min_ratio">0.2</string>
 	<string name="pool_width_max_ratio">0.5</string>
 	<string name="pool_threshold">0.6</string>
-	<string name="pool_space_count">5</string>
+	<string name="pool_space_count">20</string>
 	
 	<string name="cone_space_count">5</string>
 </resources>
