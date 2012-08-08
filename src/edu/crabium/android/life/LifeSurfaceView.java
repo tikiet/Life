@@ -1720,9 +1720,9 @@ public class LifeSurfaceView extends SurfaceView
 			context.getResources().
 					getString(R.string.brown_brick_threshold));
 		
-		PILLAR_WIDTH = Integer.valueOf(
+		PILLAR_WIDTH = (int) (BITMAP_WIDTH * Double.valueOf(
 			context.getResources().
-					getString(R.string.pillar_width));
+					getString(R.string.pillar_width_ratio)));
 		
 		PILLAR_HEIGHT_MAX = Double.valueOf(
 			context.getResources().

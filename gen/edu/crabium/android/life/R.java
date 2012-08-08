@@ -95,7 +95,7 @@ public final class R {
         public static final int pillar_height_max_ratio=0x7f040011;
         public static final int pillar_height_min_ratio=0x7f040012;
         public static final int pillar_space=0x7f040013;
-        public static final int pillar_width=0x7f040010;
+        public static final int pillar_width_ratio=0x7f040010;
         public static final int pool_space_count=0x7f04003f;
         public static final int pool_threshold=0x7f04003e;
         public static final int pool_width_max_ratio=0x7f04003d;

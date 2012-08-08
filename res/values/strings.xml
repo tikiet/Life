@@ -22,7 +22,7 @@
 	<string name="hero_shade_height_offset_ratio">0.5</string>
 	<string name="hero_shade_width_offset_ratio">0.5</string>
 	
-	<string name="pillar_width">90</string>
+	<string name="pillar_width_ratio">0.125</string>
 	<string name="pillar_height_max_ratio">0.67</string>
 	<string name="pillar_height_min_ratio">0.40</string>
 	<string name="pillar_space">5</string>
