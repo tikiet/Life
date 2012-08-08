@@ -80,5 +80,5 @@
 	
 	<string name="cone_space_count">5</string>
 	
-	<string name="game_over_screen_shift_speed">2</string>
+	<string name="game_over_screen_shift_speed">20</string>
 </resources>
