@@ -78,6 +78,7 @@ public final class R {
         public static final int dark_cloud_height_max=0x7f040008;
         public static final int dark_cloud_height_min=0x7f040009;
         public static final int dark_cloud_threshold=0x7f040007;
+        public static final int game_over_screen_shift_speed=0x7f040041;
         public static final int grass_ratio=0x7f040029;
         public static final int grass_space=0x7f04002a;
         public static final int ground_height_ratio=0x7f040026;

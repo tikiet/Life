@@ -177,6 +177,8 @@ public class LifeSurfaceView extends SurfaceView
 	private int BRICK_SHADE_ALPHA = 60;
 	private int BUSH_SHADE_ALPHA = 60;
 	
+	private int GAME_OVER_SCREEN_SHIFT_SPPED;
+	
 	private Brick[][] brickArray;
 	private Ground[] groundArray;
 	
@@ -691,7 +693,9 @@ public class LifeSurfaceView extends SurfaceView
 	}
 	@Override
 	public boolean onTouchEvent(MotionEvent event){
-		if(event.getPointerCount() == 1 && threadState == ThreadState.STOPPED && event.getAction() == MotionEvent.ACTION_DOWN){
+		if(event.getPointerCount() == 1 
+			&& (threadState == ThreadState.STOPPED || threadState == ThreadState.STOPPING) 
+			&& event.getAction() == MotionEvent.ACTION_DOWN){
 			if(restartDestRect.contains(event.getX(), event.getY())){
 				poolCoolingDistance = BITMAP_WIDTH / BRICK_WIDTH;
 				coneCoolingDistance = BITMAP_WIDTH / BRICK_WIDTH;
@@ -765,7 +769,7 @@ public class LifeSurfaceView extends SurfaceView
 	private void onStart() {
 		threadState = ThreadState.SHIFTING;
 		
-		for(int i = 0; i <= BITMAP_HEIGHT/2; i += 20){
+		for(int i = 0; i <= BITMAP_HEIGHT/2; i += GAME_OVER_SCREEN_SHIFT_SPPED){
 			Canvas canvas = holder.lockCanvas();
 			canvas.drawColor(BACK_GROUND_COLOR);
 			Rect srcRect = new Rect(0,0,BITMAP_WIDTH, BITMAP_HEIGHT/2 + i);
@@ -1353,7 +1357,8 @@ public class LifeSurfaceView extends SurfaceView
 
 		lifeDatabase.addScore(distance, duckyCount, passportCount, umbrellaCount);
 		int rank =  lifeDatabase.getRank(distance) + 1;
-		for(int i = 0; i < gameOverScreenShift ; i+=20){
+		
+		for(int i = 0; i < gameOverScreenShift && threadState == ThreadState.STOPPING; i+= GAME_OVER_SCREEN_SHIFT_SPPED){
 			Canvas canvas = holder.lockCanvas();
 			canvas.drawColor(BACK_GROUND_COLOR);
 			Rect srcRect = new Rect(0, 0, BITMAP_WIDTH , BITMAP_HEIGHT - i);
@@ -1399,7 +1404,9 @@ public class LifeSurfaceView extends SurfaceView
 			
 			holder.unlockCanvasAndPost(canvas);
 		}
-		threadState = ThreadState.STOPPED;
+		
+		if(threadState == ThreadState.STOPPING)
+			threadState = ThreadState.STOPPED;
 	}
 	
 	int lastDarkCloudOffset;
@@ -1865,6 +1872,10 @@ public class LifeSurfaceView extends SurfaceView
 				context.getResources().
 				getString(R.string.cone_space_count));
 		
+		GAME_OVER_SCREEN_SHIFT_SPPED = Integer.valueOf(
+				context.getResources().
+				getString(R.string.game_over_screen_shift_speed));
+		
 		double stageWidth =
 				BITMAP_WIDTH +
 				RANDOM_BRICK_COUNT_MAX * BRICK_WIDTH +
@@ -1883,7 +1894,8 @@ public class LifeSurfaceView extends SurfaceView
 		backGroundPaint.setColor(BACK_GROUND_COLOR);
 		canvas.drawRect(0, 0, stage.getWidth(), stage.getHeight(), backGroundPaint);
 		
-		stageWithBricks = Bitmap.createBitmap(
+		if(stageWithBricks == null)
+			stageWithBricks = Bitmap.createBitmap(
 				stage.getWidth(),
 				stage.getHeight(),
 				Bitmap.Config.ARGB_8888);
