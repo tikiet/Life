@@ -41,6 +41,8 @@ import android.view.SurfaceView;
 public class LifeSurfaceView extends SurfaceView 
 	implements SurfaceHolder.Callback{
 
+	private LifeDatabase lifeDatabase = LifeDatabase.getInstance();
+	
 	private SurfaceHolder holder;
 	private LifeSurfaceViewThread thread;
 	private Bitmap stage;
@@ -665,6 +667,7 @@ public class LifeSurfaceView extends SurfaceView
  	
 	public LifeSurfaceView(Context context, AttributeSet attrs) {
 		super(context, attrs);
+		lifeDatabase.setContext(context);
 		
 		holder = getHolder();
 		holder.addCallback(this);
@@ -762,7 +765,7 @@ public class LifeSurfaceView extends SurfaceView
 	private void onStart() {
 		threadState = ThreadState.SHIFTING;
 		
-		for(int i = 0; i <= BITMAP_HEIGHT/2; i += 4){
+		for(int i = 0; i <= BITMAP_HEIGHT/2; i += 20){
 			Canvas canvas = holder.lockCanvas();
 			canvas.drawColor(BACK_GROUND_COLOR);
 			Rect srcRect = new Rect(0,0,BITMAP_WIDTH, BITMAP_HEIGHT/2 + i);
@@ -1347,8 +1350,10 @@ public class LifeSurfaceView extends SurfaceView
 			(float)(BITMAP_HEIGHT / 2  + 5.5*BRICK_HEIGHT)
 			);
 		
-		
-		for(int i = 0; i < gameOverScreenShift ; i+=4){
+
+		lifeDatabase.addScore(distance, duckyCount, passportCount, umbrellaCount);
+		int rank =  lifeDatabase.getRank(distance) + 1;
+		for(int i = 0; i < gameOverScreenShift ; i+=20){
 			Canvas canvas = holder.lockCanvas();
 			canvas.drawColor(BACK_GROUND_COLOR);
 			Rect srcRect = new Rect(0, 0, BITMAP_WIDTH , BITMAP_HEIGHT - i);
@@ -1361,7 +1366,7 @@ public class LifeSurfaceView extends SurfaceView
 				BITMAP_HEIGHT/6 + BITMAP_WIDTH/12, 
 				distancePaint);
 			
-			canvas.drawText(String.format("Rank: %2d", 2), BITMAP_WIDTH/6, BITMAP_HEIGHT/6 + BITMAP_WIDTH/6, rankPaint);
+			canvas.drawText(String.format("Rank: %2d", rank), BITMAP_WIDTH/6, BITMAP_HEIGHT/6 + BITMAP_WIDTH/6, rankPaint);
 			canvas.drawBitmap(duckyBitmap, null, duckyDestRect, null);
 			canvas.drawBitmap(passportBitmap, null, passportDestRect, null);
 			canvas.drawBitmap(umbrellaBitmap, null, umbrellaDestRect, null);
