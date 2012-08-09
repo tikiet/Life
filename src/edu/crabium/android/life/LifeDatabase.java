@@ -5,7 +5,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 public class LifeDatabase {
-	private static Context context;
+	private Context context;
 	private static LifeDatabase INSTANCE = new LifeDatabase();
 	private LifeDatabase(){
 	}
@@ -14,12 +14,12 @@ public class LifeDatabase {
 		return INSTANCE;
 	}
 	
-	public static void setContext(Context context){
-		LifeDatabase.context = context;
+	public void setContext(Context context){
+		this.context = context;
 		createTables();
 	}
 	
-	private static void createTables(){
+	private void createTables(){
 		final String PREFIX = "CREATE TABLE IF NOT EXISTS ";
 		final int VERSION = 1;
 		SQLiteDatabase db = openDatabase();
@@ -28,12 +28,12 @@ public class LifeDatabase {
 		db.close();
 	}
 	
-	private static SQLiteDatabase openDatabase(){
+	private SQLiteDatabase openDatabase(){
 		final String DATABASE_NAME = "/data/data/edu.crabium.android.life/life.sqlite3";
 		return SQLiteDatabase.openOrCreateDatabase(DATABASE_NAME, null);
 	}
 	
-	public static void addScore(int distance, int duckyCount, int passportCount, int umbrellaCount){
+	public void addScore(int distance, int duckyCount, int passportCount, int umbrellaCount){
 		SQLiteDatabase db = openDatabase();
 		db.execSQL("INSERT INTO scores VALUES(\"" 
 				+ distance + "\", \"" 
@@ -44,7 +44,7 @@ public class LifeDatabase {
 		db.close();
 	}
 	
-	public static int getRank(int distance){
+	public int getRank(int distance){
 		SQLiteDatabase db = openDatabase();
 		Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM scores WHERE distance > ?", new String[]{distance+""});
 		cursor.moveToNext();

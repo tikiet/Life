@@ -3,18 +3,13 @@ package edu.crabium.android.life;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.PriorityQueue;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -32,7 +27,6 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.os.Bundle;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -180,20 +174,23 @@ public class LifeSurfaceView extends SurfaceView
 	
 	private int GAME_OVER_SCREEN_SHIFT_SPPED;
 	
+	// pathetic
+	private int MAXIMUM_REFRESH_RATE = 20;
+	
 	private Brick[][] brickArray;
 	private Ground[] groundArray;
 	private int[] offsetArray;
 	
 	private int[] pillarColor = new int[]{
-			0xff816550, 0xffa38d76, 0xff8e725a, 
-			0xffc0b0a3, 0xffa69079, 0xff8c705a, 
-			0xff9c846c};
+		0xff816550, 0xffa38d76, 0xff8e725a, 
+		0xffc0b0a3, 0xffa69079, 0xff8c705a, 
+		0xff9c846c};
 	
 	private int[] backPillarColor = new int[]{ 0xff342d27, 0xff221e1b, 0xff201f1d};
 	private int[] bushColor = new int[]{
-			0xff8d6e23,0xffaa8729,0xff997822,
-			0xff7a612b,0xff4c3b1d,0xffccb871,
-			0xff7c632c,0xffd4ba5b,0xffc1a446
+		0xff8d6e23,0xffaa8729,0xff997822,
+		0xff7a612b,0xff4c3b1d,0xffccb871,
+		0xff7c632c,0xffd4ba5b,0xffc1a446
 	};
 	
 	private Context context;
@@ -212,12 +209,17 @@ public class LifeSurfaceView extends SurfaceView
 	Object ted = new Object();
 	int speed;
 	int offsetArrayIndex;
+	long lastRefreshMillis;
+	
  	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
 		}
 				
-		long lastTimeIncreaseSpringboard;
 		public void run(){
+			if(heroSpeedX == 0){
+				heroSpeedX = INITIAL_SPEED;
+			}
+			
 			offsetArray = new int[(int) Math.floor(BRICK_WIDTH/ heroSpeedX)];
 			
 			for(int i = 0; i < offsetArray.length -1; i++){
@@ -225,13 +227,13 @@ public class LifeSurfaceView extends SurfaceView
 			}
 			
 			offsetArray[offsetArray.length-1] = 
-					heroSpeedX + (BRICK_WIDTH - heroSpeedX * offsetArray.length);
-			
-			Log.d("Life",String.format("width: %d, speed: %d", BRICK_WIDTH, heroSpeedX) 
-					+ ", array: " + Arrays.toString(offsetArray));
-			
-			
+				heroSpeedX + (BRICK_WIDTH - heroSpeedX * offsetArray.length);
+		
 			while(threadState == ThreadState.RUNNING || threadState == ThreadState.PAUSED){
+				if((System.currentTimeMillis() - lastRefreshMillis) < (1000/MAXIMUM_REFRESH_RATE))
+					continue;
+				lastRefreshMillis = System.currentTimeMillis();
+				
 				speed = offsetArray[offsetArrayIndex];
 				
 				Canvas canvas = new Canvas(stageWithBricks);
@@ -272,8 +274,9 @@ public class LifeSurfaceView extends SurfaceView
 				if(usingPassport)
 					drawPassportCounter(canvas);
 
-				if(threadState != ThreadState.RUNNING 
-					&& threadState != ThreadState.PAUSED) break;
+				if(threadState != ThreadState.RUNNING && threadState != ThreadState.PAUSED)
+					break;
+				
 				canvas = holder.lockCanvas();
 				canvas.drawBitmap(stageWithBricks, rSrc, rDest, null);
 				holder.unlockCanvasAndPost(canvas);
@@ -320,18 +323,15 @@ public class LifeSurfaceView extends SurfaceView
 				Paint backGroundPaint = new Paint();
 				backGroundPaint.setColor(BACK_GROUND_COLOR);
 				canvas.drawRect(
-						(float) (previousPillarPosition.getX() + BACK_PILLAR_WIDTH),
-						(float)0.0, 
-						(float)stage.getWidth(), 
-						(float)stage.getHeight(), 
-						backGroundPaint);
+					(float) (previousPillarPosition.getX() + BACK_PILLAR_WIDTH),
+					(float)0.0, 
+					(float)stage.getWidth(), 
+					(float)stage.getHeight(), 
+					backGroundPaint);
 				
 				// Draw back pillar
 				prevBackPillarEnd = drawBackPillarAndShade(
-						canvas, 
-						prevBackPillarEnd, 
-						stage.getWidth(), 
-						speed);
+					canvas, prevBackPillarEnd, stage.getWidth(), speed);
 				
 				// Draw pillar
 				prevPillarEnd = drawPillar(canvas, prevPillarEnd, prevBackPillarEnd, speed);
@@ -355,11 +355,6 @@ public class LifeSurfaceView extends SurfaceView
 				if(pillarDrawn){
 					lastPillarOffsetTmp = 0;
 					pillarDrawn = false;
-				}
-				
-				if(System.currentTimeMillis() - lastTimeIncreaseSpringboard >= 10000){
-					lastTimeIncreaseSpringboard = System.currentTimeMillis();
-					availableSpringboardCount ++;
 				}
 				
 				distance += speed;
@@ -447,7 +442,7 @@ public class LifeSurfaceView extends SurfaceView
 						}
 						else{
 							Log.d("Life", "[onTouchEvent] prevBlockX = " + prevBlockX +
-									", prevBlockY = " + prevBlockY);
+								", prevBlockY = " + prevBlockY);
 						}
 					}
 				}
@@ -508,11 +503,16 @@ public class LifeSurfaceView extends SurfaceView
 			Log.d("Life","Ground " + groundArray[i]);
 		}
 	}
-	
-	public void updateResources() 
-	{if(offsetArrayIndex == 0 || offsetArrayIndex == offsetArray.length /2 )
-		if(heroPositionY >= BITMAP_HEIGHT * PILLAR_HEIGHT_MIN)
-			availableBrickCount ++;
+
+	long lastTimeIncreaseSpringboard;
+	public void updateResources(){
+		if(offsetArrayIndex == 0 || offsetArrayIndex == offsetArray.length /2 )
+			if(heroPositionY >= BITMAP_HEIGHT * PILLAR_HEIGHT_MIN)
+				availableBrickCount ++;
+		if(System.currentTimeMillis() - lastTimeIncreaseSpringboard >= 10000){
+			lastTimeIncreaseSpringboard = System.currentTimeMillis();
+			availableSpringboardCount ++;
+		}
 	}
 
 	RectF pauseButtonRectF;
@@ -524,11 +524,11 @@ public class LifeSurfaceView extends SurfaceView
  		Bitmap continueButtonBitmap = ((BitmapDrawable)continueButtonDrawable).getBitmap();
  		
  		RectF puaseRectF = new RectF(
- 				pauseButtonRectF.left + pauseButtonRectF.width() / 4,
- 				pauseButtonRectF.top ,
- 				pauseButtonRectF.right - pauseButtonRectF.width() / 4,
- 				pauseButtonRectF.bottom - pauseButtonRectF.height() / 2
- 				);
+			pauseButtonRectF.left + pauseButtonRectF.width() / 4,
+			pauseButtonRectF.top ,
+			pauseButtonRectF.right - pauseButtonRectF.width() / 4,
+			pauseButtonRectF.bottom - pauseButtonRectF.height() / 2
+			);
  		
  		if(threadState == ThreadState.PAUSED)
  			canvas.drawBitmap(continueButtonBitmap, null, puaseRectF, null);
@@ -651,8 +651,7 @@ public class LifeSurfaceView extends SurfaceView
 		
 		if(previousPillarPositionX != 0 || previousPillarPositionY != 0){
  			previousPillarPosition = new PillarPosition(
- 					previousPillarPositionX, 
- 					previousPillarPositionY);
+				previousPillarPositionX, previousPillarPositionY);
 		}
  	}
  	
@@ -850,6 +849,7 @@ public class LifeSurfaceView extends SurfaceView
 		initializeVariables(context);
 		initializeStage();
 	}
+	
 	private void onStart() {
 		threadState = ThreadState.SHIFTING;
 		
@@ -1227,17 +1227,18 @@ public class LifeSurfaceView extends SurfaceView
 				availableBrickCountRectF.left, availableBrickCountRectF.top,
 				availableBrickCountRectF.left + availableBrickCountRectF.width() / 2, availableBrickCountRectF.bottom);
 		canvas.drawBitmap(brickBitmap, null, brickRectF, null);
-		
+
 		Paint brickPaint = new Paint();
 		brickPaint.setAntiAlias(true);
 		brickPaint.setColor(Color.WHITE);
 		brickPaint.setTextSize(textSize);
 		brickPaint.setTypeface(Typeface.MONOSPACE);
+		
 		canvas.drawText(String.format("%02d", availableBrickCount),
 				availableBrickCountRectF.left + availableBrickCountRectF.width()/2, 
 				availableBrickCountRectF.bottom,
 				brickPaint);
-		
+
 		// Display available springboard info
 		Drawable springboardDrawable = context.getResources().getDrawable(R.drawable.springboard_closed);
 		Bitmap springboardBitmap = ((BitmapDrawable)springboardDrawable).getBitmap();
@@ -1256,10 +1257,13 @@ public class LifeSurfaceView extends SurfaceView
 				availableSpringboardCountRectF.bottom,
 				springboardPaint);
 	}
-
+	
 	int lastX;
 	int lastY;
 	boolean isJumping;
+	int jumpAcceleration;
+	int jumpStages = 8;
+	int jumpDistanceY;
 	private void updateHero(Canvas canvas){
 		int x = (int) ((heroPositionX ) / BRICK_WIDTH);
 		int y = (int) ((BITMAP_HEIGHT - heroPositionY - BRICK_HEIGHT_OFFSET) / BRICK_HEIGHT );
@@ -1275,10 +1279,10 @@ public class LifeSurfaceView extends SurfaceView
 			brickArray[x+1][y] = Brick.NONE;
 		} 
 		
-		if(isJumping)
-			if(heroSpeedY > 4){
+		if(isJumping){
+			if(heroSpeedY > jumpAcceleration){
 				heroPositionY += heroSpeedY;
-				heroSpeedY -= 4;
+				heroSpeedY -= jumpAcceleration;
 				return;
 			}
 			else if(heroPositionY % BRICK_HEIGHT == 0)
@@ -1289,6 +1293,7 @@ public class LifeSurfaceView extends SurfaceView
 				heroPositionY += left;
 				return;
 			}
+		}
 		
 		if(offsetMod == 0){
 			lastX = lastY = 0;
@@ -1296,10 +1301,13 @@ public class LifeSurfaceView extends SurfaceView
 		
 		if(y < brickArray[0].length -1 && brickArray[x][y+1] == Brick.SPRINGBOARD_CLOSED){
 			heroPositionY += BRICK_HEIGHT;
-			heroSpeedY = 40;
 			isJumping = true;
 			brickArray[x][y] = Brick.SPRINGBOARD_OPENED_X1;
 			brickArray[x][y+1] = Brick.SPRINGBOARD_OPENED_X2;
+			
+			jumpDistanceY = (int) ( 0.4* BITMAP_HEIGHT);
+			heroSpeedY = 2 * jumpDistanceY / jumpStages;
+			jumpAcceleration = (int) Math.ceil(heroSpeedY / jumpStages);
 		}
 		
 		// Down

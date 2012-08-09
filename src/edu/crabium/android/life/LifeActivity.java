@@ -19,7 +19,6 @@ public class LifeActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        //this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         this.getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         DisplayMetrics displaymetrics = new DisplayMetrics();
@@ -30,11 +29,7 @@ public class LifeActivity extends Activity {
         lifeSurfaceView = (LifeSurfaceView)findViewById(R.id.surfaceView1);
         lifeSurfaceView.setHeight(displaymetrics.heightPixels);
         lifeSurfaceView.setWidth(displaymetrics.widthPixels);
-        
-        if(savedInstanceState != null){
-        	Log.d("Life","SavedInstanceState not null");
-        	//lifeSurfaceView.setThreadState(ThreadState.RECOVER);
-        }
+       
     }
     
     @Override
