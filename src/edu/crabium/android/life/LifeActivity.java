@@ -31,22 +31,6 @@ public class LifeActivity extends Activity {
         lifeSurfaceView.setHeight(displaymetrics.heightPixels);
         lifeSurfaceView.setWidth(displaymetrics.widthPixels);
         
-        int density =  getResources().getDisplayMetrics().densityDpi;
-        Log.d("Life","density:"+density);
-        if(displaymetrics.heightPixels > 800){
-        	lifeSurfaceView.setBrickHeight(64);
-        	lifeSurfaceView.setBrickWidth(64);
-        }else if(displaymetrics.heightPixels > 600){
-        	lifeSurfaceView.setBrickHeight(48);
-        	lifeSurfaceView.setBrickWidth(48);
-        }else if(displaymetrics.heightPixels > 400){
-        	lifeSurfaceView.setBrickHeight(32);
-        	lifeSurfaceView.setBrickWidth(32);
-        }else{
-        	lifeSurfaceView.setBrickHeight(24);
-        	lifeSurfaceView.setBrickWidth(24);
-        }
-        	
         if(savedInstanceState != null){
         	Log.d("Life","SavedInstanceState not null");
         	//lifeSurfaceView.setThreadState(ThreadState.RECOVER);

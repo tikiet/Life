@@ -50,9 +50,9 @@ public class LifeSurfaceView extends SurfaceView
 	private Bitmap stageWithBricks;
 	private int heroPositionX;
 	private int heroPositionY;
-	private int heroSpeedX = 4;
+	private int heroSpeedX = 7;
 	private int heroSpeedY = 0;
-	
+	private int INITIAL_SPEED = 7;
 	private int distance;
 	private int offsetMod;	
 	private ThreadState threadState;
@@ -182,6 +182,7 @@ public class LifeSurfaceView extends SurfaceView
 	
 	private Brick[][] brickArray;
 	private Ground[] groundArray;
+	private int[] offsetArray;
 	
 	private int[] pillarColor = new int[]{
 			0xff816550, 0xffa38d76, 0xff8e725a, 
@@ -209,147 +210,160 @@ public class LifeSurfaceView extends SurfaceView
 		NORMAL_DRAWN, POOL_DRAWN, BUSH_DRAWN, TREE_DRAWN, CONE_DRAWN}
 	
 	Object ted = new Object();
+	int speed;
+	int offsetArrayIndex;
  	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
 		}
-
+				
 		long lastTimeIncreaseSpringboard;
 		public void run(){
-				while(threadState == ThreadState.RUNNING || threadState == ThreadState.PAUSED){
-					Log.d("Life", "state: " + threadState);
-					
-					
-					
-					Log.d("Life", "state: " + threadState);
-					Canvas canvas = new Canvas(stageWithBricks);
-					RectF stageRectF = new RectF( 0, 0, stage.getWidth(), stage.getHeight());			
-					canvas.drawBitmap(stage, null, stageRectF, null);
-					
-	
-					synchronized(brickArray){
-						drawBrickShade(canvas, 0, offsetMod);
-					}
-					
-					drawHeroShade(canvas, heroSpeedX);
-					
-					synchronized(brickArray){
-						drawBrick(0, offsetMod);
-					}
-					
-				
-					Rect rSrc = new Rect(0,0,BITMAP_WIDTH,BITMAP_HEIGHT);
-					
-					RectF rDest = new RectF(0,0,BITMAP_WIDTH,BITMAP_HEIGHT);
-					
-					drawHero(canvas);
-	
-					updateHero(canvas);
-					
-					drawGameInfo(canvas);
-					
-					drawPauseButton(canvas);
-					
-					if(usingDuck)
-						drawDuckCounter(canvas);
-					
-					if(usingUmbrella)
-						drawUmbrellaCounter(canvas);
-					
-					if(usingPassport)
-						drawPassportCounter(canvas);
-	
-					if(threadState != ThreadState.RUNNING 
-						&& threadState != ThreadState.PAUSED) break;
-					canvas = holder.lockCanvas();
-					canvas.drawBitmap(stageWithBricks, rSrc, rDest, null);
-					holder.unlockCanvasAndPost(canvas);
-					
-					synchronized(ted){
-						if(threadState == ThreadState.PAUSED){
-							try {
-								Log.d("Life", "start waiting");
-								ted.wait();
-							} catch (InterruptedException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						}
-					}
-					
-					prevX -= heroSpeedX;
-					
-					offsetMod = (int) ((offsetMod + heroSpeedX) % BRICK_WIDTH);
-					if(offsetMod == 0 && heroSpeedX != 0){
-						synchronized(brickArray){
-							for(int i = 0; i < brickArray.length - 1; i++)
-								for(int j = 0; j < brickArray[i].length; j++)
-									brickArray[i][j] = brickArray[i+1][j];
-							for(int i = 0; i < brickArray[brickArray.length - 1].length; i ++)
-								brickArray[brickArray.length - 1][i] = Brick.NONE;
-						}
-						
-						for(int i = 0; i < groundArray.length - 1; i++)
-							groundArray[i] = groundArray[i+1];
-						groundArray[groundArray.length-1] = Ground.NONE;
-					}
-					
-					/*
-					 * shift stage
-					 */
-					rSrc = new Rect(heroSpeedX, 0, stage.getWidth(),	stage.getHeight());
-					rDest = new RectF(0, 0,	stage.getWidth() - heroSpeedX, stage.getHeight());
-					
-					canvas = new Canvas(stage);
-					canvas.drawBitmap(stage, rSrc, rDest, null);
-					
-					Paint backGroundPaint = new Paint();
-					backGroundPaint.setColor(BACK_GROUND_COLOR);
-					canvas.drawRect(
-							(float) (previousPillarPosition.getX() + BACK_PILLAR_WIDTH),
-							(float)0.0, 
-							(float)stage.getWidth(), 
-							(float)stage.getHeight(), 
-							backGroundPaint);
-					
-					// Draw back pillar
-					prevBackPillarEnd = drawBackPillarAndShade(
-							canvas, 
-							prevBackPillarEnd, 
-							stage.getWidth(), 
-							heroSpeedX);
-					
-					// Draw pillar
-					prevPillarEnd = drawPillar(canvas, prevPillarEnd, prevBackPillarEnd, heroSpeedX);
-					
-					// Draw cloud
-					prevCloudEnd = drawCloudAndShade(canvas, prevCloudEnd, prevBackPillarEnd, heroSpeedX);
-					
-					// Draw brick
-					prevBrickEnd = generateRandomBrick(prevBrickEnd, brickArray, heroSpeedX);
-	
-					// Draw dark cloud
-					prevDarkCloudEnd = generateDarkCloud(prevDarkCloudEnd, brickArray, heroSpeedX);
-					
-					// Draw ground
-					generateRandomGround(groundArray, prevPillarEnd - lastPillarOffset, offsetMod);
-					drawGround(canvas, prevPillarEnd - lastPillarOffset, offsetMod);
-	
-					// Draw grass
-					prevGrassEnd = drawGrass(canvas, prevGrassEnd, prevPillarEnd, heroSpeedX);
-					
-					if(pillarDrawn){
-						lastPillarOffsetTmp = 0;
-						pillarDrawn = false;
-					}
-					
-					if(System.currentTimeMillis() - lastTimeIncreaseSpringboard >= 10000){
-						lastTimeIncreaseSpringboard = System.currentTimeMillis();
-						availableSpringboardCount ++;
-					}
-					
-					distance += heroSpeedX;
-				}
+			offsetArray = new int[(int) Math.floor(BRICK_WIDTH/ heroSpeedX)];
 			
+			for(int i = 0; i < offsetArray.length -1; i++){
+				offsetArray[i] = heroSpeedX;
+			}
+			
+			offsetArray[offsetArray.length-1] = 
+					heroSpeedX + (BRICK_WIDTH - heroSpeedX * offsetArray.length);
+			
+			Log.d("Life",String.format("width: %d, speed: %d", BRICK_WIDTH, heroSpeedX) 
+					+ ", array: " + Arrays.toString(offsetArray));
+			
+			
+			while(threadState == ThreadState.RUNNING || threadState == ThreadState.PAUSED){
+				speed = offsetArray[offsetArrayIndex];
+				
+				Canvas canvas = new Canvas(stageWithBricks);
+				RectF stageRectF = new RectF( 0, 0, stage.getWidth(), stage.getHeight());			
+				canvas.drawBitmap(stage, null, stageRectF, null);
+				
+				synchronized(brickArray){
+					drawBrickShade(canvas, 0, offsetMod);
+				}
+				
+				drawHeroShade(canvas, offsetMod);
+				
+				synchronized(brickArray){
+					drawBrick(0, offsetMod);
+				}
+				
+			
+				Rect rSrc = new Rect(0,0,BITMAP_WIDTH,BITMAP_HEIGHT);
+				
+				RectF rDest = new RectF(0,0,BITMAP_WIDTH,BITMAP_HEIGHT);
+				
+				drawHero(canvas);
+
+				updateHero(canvas);
+				
+				updateResources();
+				
+				drawGameInfo(canvas);
+				
+				drawPauseButton(canvas);
+				
+				if(usingDuck)
+					drawDuckCounter(canvas);
+				
+				if(usingUmbrella)
+					drawUmbrellaCounter(canvas);
+				
+				if(usingPassport)
+					drawPassportCounter(canvas);
+
+				if(threadState != ThreadState.RUNNING 
+					&& threadState != ThreadState.PAUSED) break;
+				canvas = holder.lockCanvas();
+				canvas.drawBitmap(stageWithBricks, rSrc, rDest, null);
+				holder.unlockCanvasAndPost(canvas);
+				
+				synchronized(ted){
+					if(threadState == ThreadState.PAUSED){
+						try {
+							Log.d("Life", "start waiting");
+							ted.wait();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				
+				prevX -= speed;
+				
+				offsetMod = (int) ((offsetMod + offsetArray[offsetArrayIndex]) % BRICK_WIDTH);
+				offsetArrayIndex = (offsetArrayIndex +1) % offsetArray.length;
+
+				if(offsetMod == 0){
+					synchronized(brickArray){
+						for(int i = 0; i < brickArray.length - 1; i++)
+							for(int j = 0; j < brickArray[i].length; j++)
+								brickArray[i][j] = brickArray[i+1][j];
+						for(int i = 0; i < brickArray[brickArray.length - 1].length; i ++)
+							brickArray[brickArray.length - 1][i] = Brick.NONE;
+					}
+					
+					for(int i = 0; i < groundArray.length - 1; i++)
+						groundArray[i] = groundArray[i+1];
+					groundArray[groundArray.length-1] = Ground.NONE;
+				}
+				
+				/*
+				 * shift stage
+				 */
+				rSrc = new Rect(speed, 0, stage.getWidth(),	stage.getHeight());
+				rDest = new RectF(0, 0,	stage.getWidth() - speed, stage.getHeight());
+				
+				canvas = new Canvas(stage);
+				canvas.drawBitmap(stage, rSrc, rDest, null);
+				
+				Paint backGroundPaint = new Paint();
+				backGroundPaint.setColor(BACK_GROUND_COLOR);
+				canvas.drawRect(
+						(float) (previousPillarPosition.getX() + BACK_PILLAR_WIDTH),
+						(float)0.0, 
+						(float)stage.getWidth(), 
+						(float)stage.getHeight(), 
+						backGroundPaint);
+				
+				// Draw back pillar
+				prevBackPillarEnd = drawBackPillarAndShade(
+						canvas, 
+						prevBackPillarEnd, 
+						stage.getWidth(), 
+						speed);
+				
+				// Draw pillar
+				prevPillarEnd = drawPillar(canvas, prevPillarEnd, prevBackPillarEnd, speed);
+				
+				// Draw cloud
+				prevCloudEnd = drawCloudAndShade(canvas, prevCloudEnd, prevBackPillarEnd, speed);
+				
+				// Draw brick
+				prevBrickEnd = generateRandomBrick(prevBrickEnd, brickArray, speed);
+
+				// Draw dark cloud
+				prevDarkCloudEnd = generateDarkCloud(prevDarkCloudEnd, brickArray, speed);
+				
+				// Draw ground
+				generateRandomGround(groundArray, prevPillarEnd - lastPillarOffset, offsetMod);
+				drawGround(canvas, prevPillarEnd - lastPillarOffset, offsetMod);
+
+				// Draw grass
+				prevGrassEnd = drawGrass(canvas, prevGrassEnd, prevPillarEnd, speed);
+				
+				if(pillarDrawn){
+					lastPillarOffsetTmp = 0;
+					pillarDrawn = false;
+				}
+				
+				if(System.currentTimeMillis() - lastTimeIncreaseSpringboard >= 10000){
+					lastTimeIncreaseSpringboard = System.currentTimeMillis();
+					availableSpringboardCount ++;
+				}
+				
+				distance += speed;
+			}
 		}
  
 		public boolean onTouchEvent(MotionEvent event) {
@@ -495,6 +509,12 @@ public class LifeSurfaceView extends SurfaceView
 		}
 	}
 	
+	public void updateResources() 
+	{if(offsetArrayIndex == 0 || offsetArrayIndex == offsetArray.length /2 )
+		if(heroPositionY >= BITMAP_HEIGHT * PILLAR_HEIGHT_MIN)
+			availableBrickCount ++;
+	}
+
 	RectF pauseButtonRectF;
  	public void drawPauseButton(Canvas canvas) {
  		Drawable pauseButtonDrawable = context.getResources().getDrawable(R.drawable.pause_button);
@@ -800,7 +820,7 @@ public class LifeSurfaceView extends SurfaceView
 		
 		heroPositionX = 2*BRICK_WIDTH;
 		heroPositionY = 2*BRICK_HEIGHT;
-		heroSpeedX = 4;
+		heroSpeedX = INITIAL_SPEED;
 		distance = 0;
 		offsetMod = 0;
 		umbrellaCount = 0;
@@ -863,14 +883,14 @@ public class LifeSurfaceView extends SurfaceView
 				canvas, 
 				(int)(prevBackPillarEnd), 
 				stage.getWidth(), 
-				heroSpeedX);
+				speed);
 		Log.d("Life", "after prevBackPillarEnd=" + prevBackPillarEnd );
 		int prevPillarEndTmp = prevPillarEnd;
 		
 		if(prevPillarEnd == 0)
-			prevPillarEnd = drawPillar(canvas, PILLAR_WIDTH / 2 , prevBackPillarEnd, heroSpeedX);
+			prevPillarEnd = drawPillar(canvas, PILLAR_WIDTH / 2 , prevBackPillarEnd, speed);
 		else
-			prevPillarEnd = drawPillar(canvas, prevPillarEnd, prevBackPillarEnd, heroSpeedX);
+			prevPillarEnd = drawPillar(canvas, prevPillarEnd, prevBackPillarEnd, speed);
 
 		if(groundArray == null){
 			groundArray = new Ground[(int) (stage.getWidth() / BRICK_WIDTH)];
@@ -881,12 +901,12 @@ public class LifeSurfaceView extends SurfaceView
 			Log.d("Life", "1:" + Arrays.toString(groundArray));
 		}
 		
-		prevCloudEnd = drawCloudAndShade(canvas, prevCloudEnd, prevBackPillarEnd, heroSpeedX);
+		prevCloudEnd = drawCloudAndShade(canvas, prevCloudEnd, prevBackPillarEnd, speed);
 
 		Log.d("Life", "prevPillarEnd - lastPillarOffset:"+ ( prevPillarEnd - lastPillarOffset));
 		drawGround(canvas, prevPillarEnd - lastPillarOffset, 0/*heroSpeedX*/ );
 		
-		prevGrassEnd = drawGrass(canvas, prevGrassEnd, prevPillarEndTmp, heroSpeedX);
+		prevGrassEnd = drawGrass(canvas, prevGrassEnd, prevPillarEndTmp, speed);
 		
 		prevDarkCloudEnd = prevCloudEnd;
 	}
@@ -899,6 +919,16 @@ public class LifeSurfaceView extends SurfaceView
 	
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
+		BRICK_WIDTH = (int) (BITMAP_WIDTH * Double.valueOf(
+				context.getResources().
+						getString(R.string.brick_width_ratio)));
+		
+		BRICK_HEIGHT = (int) (BITMAP_HEIGHT * Double.valueOf(
+				context.getResources().
+						getString(R.string.brick_height_ratio)));
+		
+		if(BRICK_HEIGHT > BRICK_WIDTH)
+			BRICK_HEIGHT = BRICK_WIDTH;
 		poolCoolingDistance = BITMAP_WIDTH / BRICK_WIDTH;
 		coneCoolingDistance = BITMAP_WIDTH / BRICK_WIDTH;
 		poolRemaining = 0;
@@ -926,7 +956,7 @@ public class LifeSurfaceView extends SurfaceView
 			drawBrickShade(canvas, 0, offsetMod);
 		}
 		
-		drawHeroShade(canvas, heroSpeedX);
+		drawHeroShade(canvas, speed);
 		
 		synchronized(brickArray){
 			drawBrick(0, offsetMod);
@@ -1260,11 +1290,6 @@ public class LifeSurfaceView extends SurfaceView
 				return;
 			}
 		
-		
-		if(offsetMod == 0 || offsetMod == BRICK_WIDTH/2)
-			if(heroPositionY >= BITMAP_HEIGHT * PILLAR_HEIGHT_MIN)
-				availableBrickCount ++;
-		
 		if(offsetMod == 0){
 			lastX = lastY = 0;
 		}
@@ -1287,7 +1312,6 @@ public class LifeSurfaceView extends SurfaceView
 				lastY = y;
 			}
 			
-			heroSpeedX = 4;
 			
 			if(brickArray[x][y+1] == Brick.DUCKY){
 				duckyCount ++;
@@ -1309,7 +1333,6 @@ public class LifeSurfaceView extends SurfaceView
 			heroPositionY += BRICK_HEIGHT;
 			lastX = x;
 			lastY = y;
-			heroSpeedX = 4;
 			
 			if(brickArray[x+1][y-1] == Brick.DUCKY){
 				duckyCount ++;
@@ -1362,6 +1385,7 @@ public class LifeSurfaceView extends SurfaceView
 	
 	private void onGameOver(){
 		heroSpeedX  = 0;
+		speed = 0;
 		threadState = ThreadState.STOPPING;
 		
 		int gameOverScreenShift = BITMAP_HEIGHT;
@@ -1732,17 +1756,17 @@ public class LifeSurfaceView extends SurfaceView
 			context.getResources().
 					getString(R.string.pillar_height_min_ratio));
 		
-		PILLAR_SPACE = Integer.valueOf(
+		PILLAR_SPACE = BITMAP_WIDTH * Double.valueOf(
 			context.getResources().
-					getString(R.string.pillar_space));
+					getString(R.string.pillar_space_ratio));
 		
-		BACK_PILLAR_WIDTH = Integer.valueOf(
+		BACK_PILLAR_WIDTH = (int) (BITMAP_WIDTH * Double.valueOf(
 			context.getResources().
-					getString(R.string.back_pillar_width));
+					getString(R.string.back_pillar_width_ratio)));
 		
-		BACK_PILLAR_SPACE = Integer.valueOf(
+		BACK_PILLAR_SPACE = BITMAP_WIDTH * Double.valueOf(
 			context.getResources().
-					getString(R.string.back_pillar_space));
+					getString(R.string.back_pillar_space_ratio));
 		
 		BACK_PILLAR_HEIGHT_MAX = Double.valueOf(
 			context.getResources().
@@ -1761,12 +1785,13 @@ public class LifeSurfaceView extends SurfaceView
 			BACK_PILLAR_WIDTH * Double.valueOf(context.getResources().
 			getString(R.string.back_pillar_shade_height_ratio));
 		
-		HERO_HEIGHT = 
-			Integer.valueOf(context.getResources().
-					getString(R.string.hero_height));
-		HERO_WIDTH = 
-			Integer.valueOf(context.getResources().
-					getString(R.string.hero_width));
+		
+		HERO_WIDTH = (int) (BITMAP_WIDTH * Double.valueOf(context.getResources().
+			getString(R.string.hero_width_ratio)));
+		
+		HERO_HEIGHT = HERO_WIDTH * 2;
+			//Integer.valueOf(context.getResources().
+				//getString(R.string.hero_height));
 		
 		HERO_SHADE_HEIGHT_OFFSET = 
 			HERO_HEIGHT * Double.valueOf(context.getResources().
@@ -1782,12 +1807,12 @@ public class LifeSurfaceView extends SurfaceView
 		CLOUD_HEIGHT_MIN = Double.valueOf(
 			context.getResources().
 					getString(R.string.cloud_height_min));
-		CLOUD_WIDTH_MAX = Integer.valueOf(
+		CLOUD_WIDTH_MAX = (int) (BITMAP_WIDTH * Double.valueOf(
 			context.getResources().
-					getString(R.string.cloud_width_max));
-		CLOUD_WIDTH_MIN = Integer.valueOf(
+					getString(R.string.cloud_width_max_ratio)));
+		CLOUD_WIDTH_MIN = (int) (BITMAP_WIDTH * Double.valueOf(
 			context.getResources().
-					getString(R.string.cloud_width_min));
+					getString(R.string.cloud_width_min_ratio)));
 		CLOUD_SPACE_RATIO = Double.valueOf(
 			context.getResources().
 					getString(R.string.cloud_space_ratio));
