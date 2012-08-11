@@ -1,19 +1,19 @@
 package edu.crabium.android.life;
 
 public class PillarPosition{
-	private double x;
-	private double y;
+	private float x;
+	private float y;
 	
-	public PillarPosition(double x, double y){
+	public PillarPosition(float x, float y){
 		this.x = x;
 		this.y = y;
 	}
 	
-	public double getX(){
+	public float getX(){
 		return x;
 	}
 	
-	public double getY(){
+	public float getY(){
 		return y;
 	}
 }
