@@ -81,7 +81,9 @@
 	<string name="cone_threshold">0.6</string>
 	<string name="cone_space_count">5</string>
 	
-	<string name="game_over_screen_shift_speed">20</string>
+	<string name="game_over_screen_shift_speed">50</string>
+	<string name="game_start_screen_shift_speed">20</string>
+	
 	<string name="springboard_increase_interval_millis">10000</string>
 	
 	<string name="gadget_threshold">0.5</string>

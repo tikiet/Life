@@ -54,4 +54,18 @@ public class LifeDatabase {
 		
 		return result;
 	}
+	
+	public long[][] getScores(int count){
+		SQLiteDatabase db = openDatabase();
+		Cursor cursor = db.rawQuery("SELECT distance, time FROM scores ORDER BY distance DESC, time ASC", new String[]{});
+		long[][] scores = new long[cursor.getCount() > count ? count : cursor.getCount()][2];
+		for(int i = 0; i < count && i < cursor.getCount(); i ++){
+			cursor.moveToNext();
+			scores[i][0] = cursor.getLong(0);
+			scores[i][1] = cursor.getLong(1);
+		}
+		cursor.close();
+		db.close();
+		return scores;
+	}
 }

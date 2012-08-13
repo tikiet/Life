@@ -8,6 +8,8 @@ public enum ThreadState {
 	READY, 
 	SHIFTING, 
 	PAUSED, 
-	RESTARTING
+	RESTARTING,
+	SCORES,
+	ABOUT
 	};
 

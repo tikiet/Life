@@ -11,35 +11,39 @@ public final class R {
     public static final class attr {
     }
     public static final class drawable {
-        public static final int back_ground=0x7f020000;
-        public static final int bush=0x7f020001;
-        public static final int cancel=0x7f020002;
-        public static final int cloud1=0x7f020003;
-        public static final int cloud1_shade=0x7f020004;
-        public static final int cone=0x7f020005;
-        public static final int continue_button=0x7f020006;
-        public static final int dark_cloud=0x7f020007;
-        public static final int dark_cloud_shade=0x7f020008;
-        public static final int ducky=0x7f020009;
-        public static final int hero=0x7f02000a;
-        public static final int hero_shade=0x7f02000b;
-        public static final int ic_launcher=0x7f02000c;
-        public static final int lightning=0x7f02000d;
-        public static final int passport=0x7f02000e;
-        public static final int pause_button=0x7f02000f;
-        public static final int rain=0x7f020010;
-        public static final int restart=0x7f020011;
-        public static final int shade=0x7f020012;
-        public static final int springboard_closed=0x7f020013;
-        public static final int springboard_opened_1=0x7f020014;
-        public static final int springboard_opened_2=0x7f020015;
-        public static final int tile=0x7f020016;
-        public static final int tile_brown=0x7f020017;
-        public static final int tile_yellow=0x7f020018;
-        public static final int tree_crown=0x7f020019;
-        public static final int tree_crown_shade=0x7f02001a;
-        public static final int umbrella=0x7f02001b;
-        public static final int xbg=0x7f02001c;
+        public static final int about=0x7f020000;
+        public static final int back_ground=0x7f020001;
+        public static final int bush=0x7f020002;
+        public static final int cancel=0x7f020003;
+        public static final int cloud1=0x7f020004;
+        public static final int cloud1_shade=0x7f020005;
+        public static final int cone=0x7f020006;
+        public static final int continue_button=0x7f020007;
+        public static final int dark_cloud=0x7f020008;
+        public static final int dark_cloud_shade=0x7f020009;
+        public static final int ducky=0x7f02000a;
+        public static final int hero=0x7f02000b;
+        public static final int hero_shade=0x7f02000c;
+        public static final int home=0x7f02000d;
+        public static final int ic_launcher=0x7f02000e;
+        public static final int lightning=0x7f02000f;
+        public static final int passport=0x7f020010;
+        public static final int pause_button=0x7f020011;
+        public static final int rain=0x7f020012;
+        public static final int restart=0x7f020013;
+        public static final int scores=0x7f020014;
+        public static final int shade=0x7f020015;
+        public static final int springboard_closed=0x7f020016;
+        public static final int springboard_opened_1=0x7f020017;
+        public static final int springboard_opened_2=0x7f020018;
+        public static final int start=0x7f020019;
+        public static final int tile=0x7f02001a;
+        public static final int tile_brown=0x7f02001b;
+        public static final int tile_yellow=0x7f02001c;
+        public static final int tree_crown=0x7f02001d;
+        public static final int tree_crown_shade=0x7f02001e;
+        public static final int umbrella=0x7f02001f;
+        public static final int xbg=0x7f020020;
     }
     public static final class id {
         public static final int surfaceView1=0x7f050000;
@@ -81,10 +85,11 @@ public final class R {
         public static final int dark_cloud_height_max=0x7f040020;
         public static final int dark_cloud_height_min=0x7f04001f;
         public static final int dark_cloud_threshold=0x7f04001e;
-        public static final int ducky_effective_duration_millis=0x7f040048;
-        public static final int ducky_threshold=0x7f040045;
-        public static final int gadget_threshold=0x7f040044;
+        public static final int ducky_effective_duration_millis=0x7f040049;
+        public static final int ducky_threshold=0x7f040046;
+        public static final int gadget_threshold=0x7f040045;
         public static final int game_over_screen_shift_speed=0x7f040042;
+        public static final int game_start_screen_shift_speed=0x7f040043;
         public static final int grass_ratio=0x7f040029;
         public static final int grass_space=0x7f04002a;
         public static final int ground_height_ratio=0x7f040026;
@@ -96,11 +101,11 @@ public final class R {
         public static final int hero_shade_height_offset_ratio=0x7f04000b;
         public static final int hero_shade_width_offset_ratio=0x7f04000c;
         public static final int hero_width_ratio=0x7f040008;
-        public static final int jump_y_distance_ratio=0x7f04004b;
-        public static final int lightning_duration_millis=0x7f04004c;
-        public static final int lightning_interval_millis=0x7f04004d;
-        public static final int passport_effective_duration_millis=0x7f040049;
-        public static final int passport_threshold=0x7f040046;
+        public static final int jump_y_distance_ratio=0x7f04004c;
+        public static final int lightning_duration_millis=0x7f04004d;
+        public static final int lightning_interval_millis=0x7f04004e;
+        public static final int passport_effective_duration_millis=0x7f04004a;
+        public static final int passport_threshold=0x7f040047;
         public static final int pillar_height_max_ratio=0x7f04000e;
         public static final int pillar_height_min_ratio=0x7f04000f;
         public static final int pillar_space_ratio=0x7f040010;
@@ -114,7 +119,7 @@ public final class R {
         public static final int random_brick_height_max=0x7f040021;
         public static final int random_brick_height_min=0x7f040022;
         public static final int random_brick_threshold=0x7f040025;
-        public static final int springboard_increase_interval_millis=0x7f040043;
+        public static final int springboard_increase_interval_millis=0x7f040044;
         public static final int subterranean_ratio=0x7f040028;
         public static final int tree_crown_height_ratio=0x7f04002c;
         public static final int tree_crown_shade_height_offset_ratio=0x7f040032;
@@ -124,7 +129,7 @@ public final class R {
         public static final int tree_threshold=0x7f040030;
         public static final int trunk_height_ratio=0x7f04002d;
         public static final int trunk_width_ratio=0x7f04002e;
-        public static final int umbrella_effective_duration_millis=0x7f04004a;
-        public static final int umbrella_threshold=0x7f040047;
+        public static final int umbrella_effective_duration_millis=0x7f04004b;
+        public static final int umbrella_threshold=0x7f040048;
     }
 }

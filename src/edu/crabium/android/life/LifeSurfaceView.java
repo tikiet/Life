@@ -8,18 +8,23 @@ import java.io.FileReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Bitmap.Config;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Paint.Style;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
@@ -315,14 +320,21 @@ public class LifeSurfaceView extends SurfaceView
 	private int BRICK_SHADE_ALPHA = 60;
 	private int BUSH_SHADE_ALPHA = 60;
 	private int RAIN_ALPHA = 200;
+	
 	/** Screen shift speed (vertically), used in game over animation */ 
 	private int GAME_OVER_SCREEN_SHIFT_SPPED;
+	
+	/** Screen shift speed (vertically), used in game start animation */ 
+	private int GAME_START_SCREEN_SHIFT_SPPED;
 	
 	/** The maximum times to upadte screen every second */
 	private int MAXIMUM_REFRESH_RATE = 200;
 	
 	/** The interval between two springboard incrase, in milliseconds*/
 	private int SPRINGBOARD_INCREASE_INTERVAL_MILLIS;
+	
+	/** Use the SweetAsCnady font */
+	private Typeface lifeTypeface;
 	
 	/** The array to store status for every brick in the screen */
 	private Brick[][] brickArray;
@@ -427,6 +439,7 @@ public class LifeSurfaceView extends SurfaceView
 	
 	Paint backGroundPaint = new Paint();
 	Canvas canvas;
+	
  	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
 		}
@@ -486,24 +499,8 @@ public class LifeSurfaceView extends SurfaceView
 				RectF stageRectF = new RectF( 0, 0, stage.getWidth(), stage.getHeight());			
 				canvas.drawBitmap(stage, null, stageRectF, null);
 				
-				
-				/*
-				 * Draw brick and hero's shade before drawing them
-				 */
-				synchronized(brickArray){
-					drawBrickShade(canvas, 0, offsetMod);
-				}
-				
-				drawHeroShade(canvas, offsetMod);
-				
-				/* 
-				 * Time to draw brick and hero!
-				 */
-				synchronized(brickArray){
-					drawBrick(canvas, 0, offsetMod);
-				}
-				
-				drawHero(canvas);
+				/* draw hero, bricks, and their shades */
+				drawForeground(canvas);
 
 				/*
 				 * draw distance, available resources, etc in screen
@@ -639,7 +636,8 @@ public class LifeSurfaceView extends SurfaceView
 				traveledPixels += speed;
 			}
 		}
- 
+		
+		
 		/** Record the x position of previous touch event */
 		private int previousTouchX = 0;
 		
@@ -794,6 +792,30 @@ public class LifeSurfaceView extends SurfaceView
 		}
 	}
  	
+ 	/**
+	 * Draw hero, bricks, and their shades
+	 * @param canvas
+	 */
+	private void drawForeground(Canvas canvas){
+		/*
+		 * Draw brick and hero's shade before drawing them
+		 */
+		synchronized(brickArray){
+			drawBrickShade(canvas, 0, offsetMod);
+		}
+		
+		drawHeroShade(canvas, offsetMod);
+		
+		/* 
+		 * Time to draw brick and hero!
+		 */
+		synchronized(brickArray){
+			drawBrick(canvas, 0, offsetMod);
+		}
+		
+		drawHero(canvas);
+	}
+	
  	/**
  	 * A pool can't be drawn in one pass, so we need poolRemaining to indicate
  	 * how many blocks of pool are still left
@@ -1200,7 +1222,7 @@ public class LifeSurfaceView extends SurfaceView
 		 */
 		if(event.getPointerCount() == 1 && (threadState == ThreadState.STOPPED || threadState == ThreadState.STOPPING) 
 			&& event.getAction() == MotionEvent.ACTION_DOWN){
-			if(restartDestRect.contains(event.getX(), event.getY())){
+			if(restartDestRect != null && restartDestRect.contains(event.getX(), event.getY())){
 				resetVariables();
 				thread = new LifeSurfaceViewThread(holder, context);
 				threadState = ThreadState.RUNNING;
@@ -1208,7 +1230,7 @@ public class LifeSurfaceView extends SurfaceView
 				
 				return true;
 			}
-			else if(cancelDestRect.contains(event.getX(), event.getY())){
+			else if(cancelDestRect != null && cancelDestRect.contains(event.getX(), event.getY())){
 				resetVariables();
 				displayHome();
 				
@@ -1234,11 +1256,57 @@ public class LifeSurfaceView extends SurfaceView
 				}
 			}
 		}
-		/*
-		 * If game is ready and screen is tappd, start game
-		 */
 		else if(event.getPointerCount() == 1 && threadState == ThreadState.READY && event.getAction() == MotionEvent.ACTION_DOWN){
-			onStart();
+
+			/*
+			 * If tapped start button, start game
+			 */
+			if( startDestRect != null && (Math.pow((event.getX() - startDestRect.centerX()), 2) +
+				Math.pow((event.getY() - startDestRect.centerY()), 2)) <=
+				Math.pow((startDestRect.width()*0.6),2))
+				{
+				onStart();
+			}
+			/* If tapped scores button, show scores */
+			else if( scoresDestRect != null && (Math.pow((event.getX() - scoresDestRect.centerX()), 2) +
+				Math.pow((event.getY() - scoresDestRect.centerY()), 2)) <=
+				Math.pow((scoresDestRect.width()*0.6),2))
+				{
+				displayScores();
+			}
+			/* If tapped about button, show about */
+			else if( aboutDestRect != null && (Math.pow((event.getX() - aboutDestRect.centerX()), 2) +
+				Math.pow((event.getY() - aboutDestRect.centerY()), 2)) <=
+				Math.pow((aboutDestRect.width()*0.6),2))
+				{
+				displayAbout();
+			}
+		}
+		else if(event.getPointerCount() == 1 && 
+				(threadState == ThreadState.SCORES || threadState == ThreadState.ABOUT) && 
+				event.getAction() == MotionEvent.ACTION_DOWN){
+			
+			if( homeDestRect != null && (Math.pow((event.getX() - homeDestRect.centerX()), 2) +
+				Math.pow((event.getY() - homeDestRect.centerY()), 2)) <=
+				Math.pow((homeDestRect.width()*0.6),2))
+				{
+					threadState = ThreadState.READY;
+					displayHome();
+				}
+			/* If tapped scores button, show scores */
+			else if( scoresDestRect != null && (Math.pow((event.getX() - scoresDestRect.centerX()), 2) +
+				Math.pow((event.getY() - scoresDestRect.centerY()), 2)) <=
+				Math.pow((scoresDestRect.width()*0.6),2))
+				{
+					displayScores();
+				}
+			/* If tapped about button, show about */
+			else if( aboutDestRect != null && (Math.pow((event.getX() - aboutDestRect.centerX()), 2) +
+				Math.pow((event.getY() - aboutDestRect.centerY()), 2)) <=
+				Math.pow((aboutDestRect.width()*0.6),2))
+				{
+					displayAbout();
+				}
 		}
 		
 		if(thread == null)
@@ -1303,7 +1371,7 @@ public class LifeSurfaceView extends SurfaceView
 	private void onStart() {
 		threadState = ThreadState.SHIFTING;
 		
-		for(int i = 0; i <= SCREEN_HEIGHT/2; i += GAME_OVER_SCREEN_SHIFT_SPPED){
+		for(int i = 0; i <= SCREEN_HEIGHT/2; i += GAME_START_SCREEN_SHIFT_SPPED){
 			Canvas canvas = holder.lockCanvas();
 			canvas.drawColor(BACK_GROUND_COLOR);
 			Rect srcRect = new Rect(0,0,SCREEN_WIDTH, SCREEN_HEIGHT/2 + i);
@@ -1410,49 +1478,491 @@ public class LifeSurfaceView extends SurfaceView
 		}
 	}
 	
-	//TODO: needs beautifying
-
-	Paint textPaint = new Paint();
-	
-	/**
-	 * Display home screen, draw 'Uniform Motion', 'Life', etc.
+	/** 
+	 * Draw stage's content to stageWithBricks, which
+	 * can avoiding polluting stage
 	 */
-	private void displayHome() {
+	private void stageToStageWithBricks(){
 		Canvas canvas = new Canvas(stageWithBricks);
 		RectF stageRectF = new RectF( 0, 0, stage.getWidth(), stage.getHeight());			
 		canvas.drawBitmap(stage, null, stageRectF, null);
-		
-		synchronized(brickArray){
-			drawBrickShade(canvas, 0, offsetMod);
-		}
-		
-		drawHeroShade(canvas, speed);
-		
-		synchronized(brickArray){
-			drawBrick(canvas, 0, offsetMod);
-		}
-		
-		drawHero(canvas);
-		
-		canvas = holder.lockCanvas();
+	}
+	
+	/**
+	 * Draw upper half of stage to canvas
+	 */
+	private void halfStageToCanvas(Canvas canvas){
 		canvas.drawColor(BACK_GROUND_COLOR);
 		Rect srcRect = new Rect(0,0,SCREEN_WIDTH, SCREEN_HEIGHT/2);
 		RectF destRect = new RectF(0, SCREEN_HEIGHT/2, SCREEN_WIDTH, SCREEN_HEIGHT);
 		
 		canvas.drawBitmap(stageWithBricks, srcRect, destRect, null);
+	}
+	
+	/**
+	 * Draw Uniform Motion and Life on canvas
+	 */
+	private void drawUniformMotionText(Canvas canvas){
+		Paint uniformMotionTextPaint = new Paint();
 		
-		textPaint.setAntiAlias(true);
-		textPaint.setTextSize(SCREEN_WIDTH / 10);
-		textPaint.setTextAlign(Align.CENTER);
-		textPaint.setColor(Color.WHITE);
-		canvas.drawText("Uniform Motion", SCREEN_WIDTH/2, SCREEN_HEIGHT/3, textPaint);
+		uniformMotionTextPaint.setAntiAlias(true);
+		uniformMotionTextPaint.setTextSize(SCREEN_WIDTH / 10);
+		uniformMotionTextPaint.setTextAlign(Align.CENTER);
+		uniformMotionTextPaint.setColor(Color.WHITE);
+		canvas.drawText("Uniform Motion", SCREEN_WIDTH/2, SCREEN_HEIGHT/3, uniformMotionTextPaint);
 		
-		textPaint.setTextSize(SCREEN_WIDTH / 6);
-		canvas.drawText("Life", SCREEN_WIDTH/2, SCREEN_HEIGHT*2/3, textPaint);
-		holder.unlockCanvasAndPost(canvas);
+		uniformMotionTextPaint.setTextSize(SCREEN_WIDTH / 6);
+		canvas.drawText("Life", SCREEN_WIDTH/2, SCREEN_HEIGHT*2/3, uniformMotionTextPaint);
 		
 	}
+	
+	/**
+	 * Display scores and dates
+	 */
+	private void displayScores(){
+		threadState = ThreadState.SCORES;
+		
+		/* Copy stage's content to stageWithBricks, because stage's
+		 * original content will also be used in game, shouldn't be
+		 * polluted.
+		 */
+		stageToStageWithBricks();
+		
+		Canvas canvas = new Canvas(stageWithBricks);
+		
+		/* Draw hero, bricks, etc on stageWithBricks, which
+		 * makes a smooth shift between game start animation 
+		 * and the first screen of the game.
+		 */
+		drawForeground(canvas);
+		
+		canvas = holder.lockCanvas();
+		
+		/* Draw upper half of stageWithBricks content on canvas,
+		 * makes as if we're in the sky
+		 */
+		halfStageToCanvas(canvas);
+		
+		/*
+		 * Draw Uniform Motion and Life on the screen, makes
+		 * the home screen as if Life's upper half cover
+		 */
+		drawUniformMotionText(canvas);
 
+		int buttonHeight = SCREEN_WIDTH * 1 / 9;
+		int buttonWidth = SCREEN_WIDTH * 1 / 9;
+		int scoresBoardWidth = (int) (SCREEN_WIDTH - (SCREEN_WIDTH / 3 - 1.2 * buttonWidth));
+		int scoresBoardHeight = (int)(SCREEN_HEIGHT - (SCREEN_HEIGHT / 3 - 1.2 * buttonHeight));
+
+		/* Draw a board on screen, and a heading on it */
+		Bitmap scoresBoardBitmap = Bitmap.createBitmap(scoresBoardWidth, scoresBoardHeight, Config.ARGB_8888);
+		Canvas scoresBoardCanvas = new Canvas(scoresBoardBitmap);
+		drawBoard(scoresBoardCanvas, scoresBoardWidth,scoresBoardHeight);
+		
+		int scoresTextHeight = (int) (buttonHeight * 0.6);
+		int scoresTextWidth = scoresBoardWidth;
+		drawBoardHeading(scoresBoardCanvas, "SCORES", scoresTextWidth, scoresTextHeight);
+
+		/* Create a sample text, used for decide text size */
+		GregorianCalendar cal = new GregorianCalendar();
+		cal.setTimeInMillis(System.currentTimeMillis());
+		String timeString = String.format("1. %05dM\t%s %d %d", 
+			99999, 
+			cal.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.US),
+			cal.get(GregorianCalendar.DATE),
+			cal.get(GregorianCalendar.YEAR)
+		);
+		
+		int scoreTextHeight = (int) ((scoresBoardHeight - scoresTextHeight - 1.4 * buttonWidth) / 10);
+		int scoreTextWidth = (int)(scoresBoardWidth * 0.8);
+		
+		Paint scoreTextPaint = new Paint();
+		scoreTextPaint.setAntiAlias(true);
+		scoreTextPaint.setColor(Color.WHITE);
+		scoreTextPaint.setTextAlign(Align.RIGHT);
+		scoreTextPaint.setTypeface(lifeTypeface);
+		
+		/* Find the largest text size that can be put in the board */
+		Rect scoreTextBoundsRect = new Rect();
+		for(int i = 1;; i++){
+			scoreTextPaint.setTextSize(i);
+			scoreTextPaint.getTextBounds(timeString , 0, timeString.length(), scoreTextBoundsRect);
+			
+			if( scoreTextBoundsRect.width() > scoreTextWidth ||
+					scoreTextBoundsRect.height() > scoreTextHeight){
+				scoreTextPaint.setTextSize((float) ((i-1)*0.9));
+				break;
+			}
+		}
+		
+		/*
+		 * Get ranks from database
+		 */
+		long scores[][] = lifeDatabase.getScores(10);
+		
+		/*
+		 * Draw ranks on the board, in a "Rank Distance Date" format"
+		 */
+		for(int i = 0; i < 10 && i < scores.length; i++){
+			cal.setTimeInMillis(scores[i][1]);
+			
+			String scoreTextRank = String.format("%2d.",i+1);
+			String scoreTextDistance = String.format("%5d M ", scores[i][0]);
+			
+			/* Get the date's string representation */
+			String scoreTextDate = String.format("%s %s %s",
+				cal.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.US),
+				cal.get(GregorianCalendar.DATE),
+				cal.get(GregorianCalendar.YEAR)
+			);
+			
+			/* Draw rank */
+			scoresBoardCanvas.drawText(
+				scoreTextRank,
+				(scoresBoardWidth - scoreTextWidth) / 2 + (scoresBoardWidth - scoreTextWidth) / 4,  
+				scoresTextHeight  + scoreTextHeight * (i+1), 
+				scoreTextPaint
+			);
+			
+			/* Draw distance */
+			scoresBoardCanvas.drawText(
+				scoreTextDistance,
+				scoresBoardWidth / 2  - (scoresBoardWidth - scoreTextWidth)/2 + (scoresBoardWidth - scoreTextWidth)/4,  
+				scoresTextHeight  + scoreTextHeight * (i+1), 
+				scoreTextPaint
+			);
+			
+			/* Draw date */
+			scoresBoardCanvas.drawText(
+				scoreTextDate,
+				scoresBoardWidth * 3 / 3 - (scoresBoardWidth - scoreTextWidth)/2,  
+				scoresTextHeight  + scoreTextHeight * (i+1), 
+				scoreTextPaint
+			);
+		}
+		
+		/*
+		 * Draw the board on the screen
+		 */
+		canvas.drawBitmap(scoresBoardBitmap, 
+				(float) (SCREEN_WIDTH / 3 - 1.2 * buttonWidth)/2, 
+				(float) ((SCREEN_HEIGHT / 3 - 1.2 * buttonHeight) /2)
+				, null);
+		
+		drawButtons(canvas);
+		holder.unlockCanvasAndPost(canvas);
+	}
+	
+	/** Draw buttons on the main screen*/
+	private void drawButtons(Canvas canvas){
+
+		int scoresButtonHeight = SCREEN_WIDTH * 1 / 9;
+		int scoresButtonWidth = SCREEN_WIDTH * 1 / 9;
+		int aboutButtonHeight = SCREEN_WIDTH * 1 / 9;
+		int aboutButtonWidth = SCREEN_WIDTH * 1 / 9;
+		int startButtonHeight = SCREEN_WIDTH * 1 / 9;
+		int startButtonWidth = SCREEN_WIDTH * 1 / 9;
+		int homeButtonHeight = SCREEN_WIDTH * 1 / 9;
+		int homeButtonWidth = SCREEN_WIDTH * 1 / 9;
+		
+		/* draw scores button */
+		Drawable scoresDrawable = context.getResources().getDrawable(R.drawable.scores);
+		Bitmap scoresBitmap = ((BitmapDrawable)scoresDrawable).getBitmap();
+		
+		scoresDestRect = new Rect(
+				SCREEN_WIDTH * 1 / 9,
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2, 
+				SCREEN_WIDTH * 2 / 9, 
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2 + scoresButtonHeight);
+		Paint scoresButtonPaint = new Paint();
+		scoresButtonPaint.setColor(0xffed9301);
+		scoresButtonPaint.setAntiAlias(true);
+
+		scoresButtonPaint.setColor(0x7fffffff);
+		canvas.drawCircle(scoresDestRect.centerX(), scoresDestRect.centerY(), (float)(scoresDestRect.width() * 0.7), scoresButtonPaint);
+		
+		scoresButtonPaint.setColor(0xffed9301);
+		canvas.drawCircle(scoresDestRect.centerX(), scoresDestRect.centerY(), (float)(scoresDestRect.width() * 0.6), scoresButtonPaint);
+		canvas.drawBitmap(scoresBitmap, null, scoresDestRect, null);
+		
+		/* draw about button */
+		Drawable aboutDrawable = context.getResources().getDrawable(R.drawable.about);
+		Bitmap aboutBitmap = ((BitmapDrawable)aboutDrawable).getBitmap();
+		
+		aboutDestRect = new Rect(
+				SCREEN_WIDTH - SCREEN_WIDTH * 2 / 9,
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2, 
+				SCREEN_WIDTH - SCREEN_WIDTH * 1 / 9, 
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2 + aboutButtonHeight);
+		Paint aboutButtonPaint = new Paint();
+		aboutButtonPaint.setAntiAlias(true);
+		
+		aboutButtonPaint.setColor(0x7fffffff);
+		canvas.drawCircle(aboutDestRect.centerX(), aboutDestRect.centerY(), (float)(aboutDestRect.width() * 0.7), aboutButtonPaint);
+		
+		aboutButtonPaint.setColor(0xffed9301);
+		canvas.drawCircle(aboutDestRect.centerX(), aboutDestRect.centerY(), (float)(aboutDestRect.width() * 0.6), aboutButtonPaint);
+		canvas.drawBitmap(aboutBitmap, null, aboutDestRect, null);
+		
+		/* draw home button */
+		Drawable homeDrawable = context.getResources().getDrawable(R.drawable.home);
+		Bitmap homeBitmap = ((BitmapDrawable)homeDrawable).getBitmap();
+		
+		homeDestRect = new Rect(
+				SCREEN_WIDTH / 2 - homeButtonWidth / 2,
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - homeButtonHeight) / 2, 
+				SCREEN_WIDTH /2 + homeButtonWidth / 2, 
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - homeButtonHeight) / 2 + homeButtonHeight);
+		Paint homeButtonPaint = new Paint();
+		homeButtonPaint.setAntiAlias(true);
+		
+		homeButtonPaint.setColor(0x7fffffff);
+		canvas.drawCircle(homeDestRect.centerX(), homeDestRect.centerY(), (float)(homeDestRect.width() * 0.7), homeButtonPaint);
+		
+		homeButtonPaint.setColor(0xffed9301);
+		canvas.drawCircle(homeDestRect.centerX(), homeDestRect.centerY(), (float)(homeDestRect.width() * 0.6), homeButtonPaint);
+		canvas.drawBitmap(homeBitmap, null, homeDestRect, null);
+	}
+	
+	/**
+	 * Draw a background board for SCORES and ABOUT 
+	 */
+	private void drawBoard(Canvas canvas, int width, int height){
+		int scoresButtonWidth = SCREEN_WIDTH * 1 / 9;
+		
+		canvas.drawColor(0x00000000);
+		RectF boardRectF = new RectF(0,0, width, height);
+		Paint boardPaint = new Paint();
+		boardPaint.setAntiAlias(true);
+		boardPaint.setColor(0xffed9301);
+		canvas.drawRoundRect(
+				boardRectF, 
+				(float)(scoresButtonWidth * 0.6), 
+				(float)(scoresButtonWidth * 0.6), 
+				boardPaint);
+	}
+	
+	/** Draw board heading */
+	private void drawBoardHeading(Canvas boardCanvas, String text, int textWidth, int textHeight){
+		Paint textPaint = new Paint();
+		textPaint.setAntiAlias(true);
+		textPaint.setColor(Color.WHITE);
+		textPaint.setTextAlign(Align.CENTER);
+		textPaint.setTypeface(lifeTypeface);
+		Rect textBoundsRect = new Rect();
+		
+		for(int i = 1;; i++){
+			textPaint.setTextSize(i);
+			textPaint.getTextBounds(text, 0, text.length(), textBoundsRect);
+			
+			if( textBoundsRect.width() > textWidth ||
+					textBoundsRect.height() > textHeight){
+				textPaint.setTextSize((float) ((i-1)*0.7));
+				break;
+			}
+		}
+
+		textPaint.getTextBounds(text, 0, text.length(), textBoundsRect);
+		boardCanvas.drawText(text, 
+				textWidth / 2 , 
+				textHeight - (textHeight - textBoundsRect.height()) / 2, 
+				textPaint);
+	}
+	
+	/**
+	 * Display information about Uniform Motion, us, and help
+	 */
+	private void displayAbout(){
+		threadState = ThreadState.ABOUT;
+		
+		/* Copy stage's content to stageWithBricks, because stage's
+		 * original content will also be used in game, shouldn't be
+		 * polluted.
+		 */
+		stageToStageWithBricks();
+		
+		Canvas canvas = new Canvas(stageWithBricks);
+		
+		/* Draw hero, bricks, etc on stageWithBricks, which
+		 * makes a smooth shift between game start animation 
+		 * and the first screen of the game.
+		 */
+		drawForeground(canvas);
+		
+		canvas = holder.lockCanvas();
+		
+		/* Draw upper half of stageWithBricks content on canvas,
+		 * makes as if we're in the sky
+		 */
+		halfStageToCanvas(canvas);
+		
+		/*
+		 * Draw Uniform Motion and Life on the screen, makes
+		 * the home screen as if Life's upper half cover
+		 */
+		drawUniformMotionText(canvas);
+
+		int buttonHeight = SCREEN_WIDTH * 1 / 9;
+		int buttonWidth = SCREEN_WIDTH * 1 / 9;
+		int aboutBoardWidth = (int) (SCREEN_WIDTH - (SCREEN_WIDTH / 3 - 1.2 * buttonWidth));
+		int aboutBoardHeight = (int)(SCREEN_HEIGHT - (SCREEN_HEIGHT / 3 - 1.2 * buttonHeight));
+		
+		/* Draw a board on screen, and a heading on it */
+		Bitmap aboutBoardBitmap = Bitmap.createBitmap(aboutBoardWidth, aboutBoardHeight, Config.ARGB_8888);
+		Canvas aboutBoardCanvas = new Canvas(aboutBoardBitmap);
+		drawBoard(aboutBoardCanvas, aboutBoardWidth, aboutBoardHeight);
+		
+		int aboutHeadTextHeight = (int) (buttonHeight * 0.6);
+		int aboutHeadTextWidth = aboutBoardWidth;
+		drawBoardHeading(aboutBoardCanvas, "ABOUT", aboutHeadTextWidth, aboutHeadTextHeight);
+		
+		/*
+		 * All the text used in the ABOUT screen
+		 */
+		String[] aboutText = new String[]{
+			"Inspired & Music By Unifrom Motion",
+			"    www.uniformmotion.net",
+			"",
+			"Developed By",
+			"    Wu Xudong ( www.wuxd.me )",
+			"    Li Wei ( www.mindlee.net )",
+			"",
+			"Artwork By Someone",
+			"",
+			"Free Font SweetAsCandy By Jakob Fischer",
+			"    www.pizzadude.dk"
+		};
+		/*
+		 * Find the index of the with maximum length
+		 */
+		int aboutTextMaxLen = 0;
+		int aboutTextMaxIndex =0;
+		for(int i =  0; i < aboutText.length; i++){
+			if(aboutText[i].length() > aboutTextMaxLen){
+				aboutTextMaxLen = aboutText[i].length();
+				aboutTextMaxIndex = i;
+			}
+		}
+		
+		int aboutTextHeight = (int) ((aboutBoardHeight - aboutHeadTextHeight - 1.4 * buttonWidth) / aboutText.length);
+		int aboutTextWidth = (int)(aboutBoardWidth * 0.8);
+		Paint aboutTextPaint = new Paint();
+		aboutTextPaint.setAntiAlias(true);
+		aboutTextPaint.setColor(Color.WHITE);
+		aboutTextPaint.setTypeface(lifeTypeface);
+		
+		/*
+		 * Find the largest suitable text size
+		 */
+		Rect aboutTextBoundsRect = new Rect();
+		for(int i = 1;; i++){
+			aboutTextPaint.setTextSize(i);
+			aboutTextPaint.getTextBounds(aboutText[aboutTextMaxIndex] , 0, aboutTextMaxLen, aboutTextBoundsRect);
+			
+			if( aboutTextBoundsRect.width() > aboutTextWidth ||
+					aboutTextBoundsRect.height() > aboutTextHeight){
+				aboutTextPaint.setTextSize((float) ((i-1)));
+				break;
+			}
+		}
+		
+		/*
+		 * Draw ABOUT texts on the board
+		 */
+		for(int i = 0; i < aboutText.length; i++){
+			aboutBoardCanvas.drawText(
+				aboutText[i],
+				(aboutBoardWidth - aboutTextWidth) / 2 ,  
+				aboutHeadTextHeight  + aboutTextHeight * (i+1), 
+				aboutTextPaint
+			);
+		}
+		
+		/*
+		 * Draw the board on the screen
+		 */
+		canvas.drawBitmap(aboutBoardBitmap, 
+				(float) (SCREEN_WIDTH / 3 - 1.2 * buttonWidth)/2, 
+				(float) ((SCREEN_HEIGHT / 3 - 1.2 * buttonHeight) /2)
+				, null);
+		
+		drawButtons(canvas);
+		holder.unlockCanvasAndPost(canvas);
+	}
+	
+	/**
+	 * Display home screen, draw 'Uniform Motion', 'Life', etc.
+	 */
+	private void displayHome() {
+		stageToStageWithBricks();
+
+		Canvas canvas = new Canvas(stageWithBricks);
+		drawForeground(canvas);
+		
+		canvas = holder.lockCanvas();
+		halfStageToCanvas(canvas);
+		
+		drawUniformMotionText(canvas);
+		
+		/* draw scores button */
+		Drawable scoresDrawable = context.getResources().getDrawable(R.drawable.scores);
+		Bitmap scoresBitmap = ((BitmapDrawable)scoresDrawable).getBitmap();
+		int  scoresButtonHeight = SCREEN_WIDTH * 1 / 9;
+		int  scoresButtonWidth = SCREEN_WIDTH * 1 / 9;
+		
+		scoresDestRect = new Rect(
+				SCREEN_WIDTH * 1 / 9,
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2, 
+				SCREEN_WIDTH * 2 / 9, 
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2 + scoresButtonHeight);
+		Paint scoresButtonPaint = new Paint();
+		scoresButtonPaint.setColor(0xffed9301);
+		scoresButtonPaint.setAntiAlias(true);
+		canvas.drawCircle(scoresDestRect.centerX(), scoresDestRect.centerY(), (float)(scoresDestRect.width() * 0.6), scoresButtonPaint);
+		canvas.drawBitmap(scoresBitmap, null, scoresDestRect, null);
+		
+		/* draw about button */
+		Drawable aboutDrawable = context.getResources().getDrawable(R.drawable.about);
+		Bitmap aboutBitmap = ((BitmapDrawable)aboutDrawable).getBitmap();
+		int  aboutButtonHeight = SCREEN_WIDTH * 1 / 9;
+		int  aboutButtonWidth = SCREEN_WIDTH * 1 / 9;
+		
+		aboutDestRect = new Rect(
+				SCREEN_WIDTH - SCREEN_WIDTH * 2 / 9,
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2, 
+				SCREEN_WIDTH - SCREEN_WIDTH * 1 / 9, 
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2 + aboutButtonHeight);
+		Paint aboutButtonPaint = new Paint();
+		aboutButtonPaint.setColor(0xffed9301);
+		aboutButtonPaint.setAntiAlias(true);
+		canvas.drawCircle(aboutDestRect.centerX(), aboutDestRect.centerY(), (float)(aboutDestRect.width() * 0.6), aboutButtonPaint);
+		canvas.drawBitmap(aboutBitmap, null, aboutDestRect, null);
+		
+		/* draw start button */
+		Drawable startDrawable = context.getResources().getDrawable(R.drawable.start);
+		Bitmap startBitmap = ((BitmapDrawable)startDrawable).getBitmap();
+		int  startButtonHeight = SCREEN_WIDTH * 1 / 9;
+		int  startButtonWidth = SCREEN_WIDTH * 1 / 9;
+		
+		startDestRect = new Rect(
+				SCREEN_WIDTH / 2 - startButtonWidth / 2,
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - startButtonHeight) / 2, 
+				SCREEN_WIDTH /2 + startButtonWidth / 2, 
+				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - startButtonHeight) / 2 + startButtonHeight);
+		Paint startButtonPaint = new Paint();
+		startButtonPaint.setColor(0xffed9301);
+		startButtonPaint.setAntiAlias(true);
+		canvas.drawCircle(startDestRect.centerX(), startDestRect.centerY(), (float)(startDestRect.width() * 0.6), startButtonPaint);
+		canvas.drawBitmap(startBitmap, null, startDestRect, null);
+		
+		holder.unlockCanvasAndPost(canvas);
+	}
+	
+	private Rect startDestRect;
+	private Rect aboutDestRect;
+	private Rect scoresDestRect;
+	private Rect homeDestRect;
+	
 	/**
 	 * Generate random bricks in brickArray
 	 * @param start
@@ -1667,10 +2177,9 @@ public class LifeSurfaceView extends SurfaceView
 	Paint duckyPaint = new Paint();
 	Paint umbrellaCountPaint = new Paint();
 	Paint passportCountPaint = new Paint();
-	Paint springboardPaint = new Paint();
+	Paint avaiableSpringboardPaint = new Paint();
 	Paint availableBrickPaint = new Paint();
 	
-	//TODO needs beautifying
 	/**
 	 * Display available resources
 	 */
@@ -1679,14 +2188,27 @@ public class LifeSurfaceView extends SurfaceView
 		distancePaint.setAntiAlias(true);
 		distancePaint.setColor(Color.WHITE);
 		distancePaint.setTextSize(SCREEN_WIDTH/20);
-		distancePaint.setTypeface(Typeface.MONOSPACE);
-		canvas.drawText(Integer.toString(getDistance()), SCREEN_HEIGHT/10 - SCREEN_WIDTH/20, SCREEN_HEIGHT/10, distancePaint);
+		distancePaint.setTypeface(lifeTypeface);
+		String distanceText;
+		int distance = getDistance();
+		if(distance < 10)
+			distanceText = "0000" + Integer.toString(distance);
+		else if(distance < 100)
+			distanceText = "000" + Integer.toString(distance);
+		else if(distance < 1000)
+			distanceText = "00" + Integer.toString(distance);
+		else if(distance < 10000)
+			distanceText = "0" + Integer.toString(distance);
+		else
+			distanceText = Integer.toString(distance);
+		
+		canvas.drawText(distanceText, SCREEN_HEIGHT/10 - SCREEN_WIDTH/20, SCREEN_HEIGHT/10, distancePaint);
 		
 		// A loop that decide the largest text size that can be put in the drawing area
 		if(gameInfoTextSize == 0){
 			Paint tmpPaint = new Paint();
 			tmpPaint.setTextAlign(Align.LEFT);
-			tmpPaint.setTypeface(Typeface.MONOSPACE);
+			tmpPaint.setTypeface(lifeTypeface);
 			for(int size = 1;; size++){
 				tmpPaint.setTextSize(size);
 				Rect tmpRect = new Rect();
@@ -1710,8 +2232,13 @@ public class LifeSurfaceView extends SurfaceView
 		duckyPaint.setAntiAlias(true);
 		duckyPaint.setColor(Color.WHITE);
 		duckyPaint.setTextSize(gameInfoTextSize);
-		duckyPaint.setTypeface(Typeface.MONOSPACE);
-		canvas.drawText(Integer.toString(duckyCount),
+		duckyPaint.setTypeface(lifeTypeface);
+		String duckyText;
+		if(duckyCount < 10)
+			duckyText = "0" + Integer.toString(duckyCount);
+		else
+			duckyText = Integer.toString(duckyCount);
+		canvas.drawText(duckyText,
 			duckyCountRectF.left, duckyCountRectF.bottom ,duckyPaint);
 		
 		// Display umbrella info
@@ -1724,8 +2251,13 @@ public class LifeSurfaceView extends SurfaceView
 		umbrellaCountPaint.setAntiAlias(true);
 		umbrellaCountPaint.setColor(Color.WHITE);
 		umbrellaCountPaint.setTextSize(gameInfoTextSize);
-		umbrellaCountPaint.setTypeface(Typeface.MONOSPACE);
-		canvas.drawText(Integer.toString(umbrellaCount),
+		umbrellaCountPaint.setTypeface(lifeTypeface);
+		String umbrellaText;
+		if(umbrellaCount < 10)
+			umbrellaText = "0" + Integer.toString(umbrellaCount);
+		else
+			umbrellaText = Integer.toString(umbrellaCount);
+		canvas.drawText(umbrellaText,
 			umbrellaCountRectF.left, umbrellaCountRectF.bottom,	umbrellaCountPaint);
 		
 		// Display passport info
@@ -1738,8 +2270,13 @@ public class LifeSurfaceView extends SurfaceView
 		passportCountPaint.setAntiAlias(true);
 		passportCountPaint.setColor(Color.WHITE);
 		passportCountPaint.setTextSize(gameInfoTextSize);
-		passportCountPaint.setTypeface(Typeface.MONOSPACE);
-		canvas.drawText(Integer.toString(passportCount),
+		passportCountPaint.setTypeface(lifeTypeface);
+		String passportText;
+		if(passportCount < 10)
+			passportText = "0" + Integer.toString(passportCount);
+		else
+			passportText = Integer.toString(passportCount);
+		canvas.drawText(passportText,
 			passportCountRectF.left, passportCountRectF.bottom,	passportCountPaint);
 		
 		// Display available brick info
@@ -1751,9 +2288,14 @@ public class LifeSurfaceView extends SurfaceView
 		availableBrickPaint.setAntiAlias(true);
 		availableBrickPaint.setColor(Color.WHITE);
 		availableBrickPaint.setTextSize(gameInfoTextSize);
-		availableBrickPaint.setTypeface(Typeface.MONOSPACE);
+		availableBrickPaint.setTypeface(lifeTypeface);
+		String availableBrickText;
+		if(availableBrickCount < 10)
+			availableBrickText = "0" + Integer.toString(availableBrickCount);
+		else
+			availableBrickText = Integer.toString(availableBrickCount);
 		
-		canvas.drawText(Integer.toString(availableBrickCount),
+		canvas.drawText(availableBrickText,
 			availableBrickCountRectF.left + availableBrickCountRectF.width()/2, 
 			availableBrickCountRectF.bottom, availableBrickPaint);
 
@@ -1763,14 +2305,21 @@ public class LifeSurfaceView extends SurfaceView
 			availableSpringboardCountRectF.left + availableSpringboardCountRectF.width() / 2, availableSpringboardCountRectF.bottom);
 		canvas.drawBitmap(springboardClosedBitmap, null, springboardRectF, null);
 		
-		springboardPaint.setAntiAlias(true);
-		springboardPaint.setColor(Color.WHITE);
-		springboardPaint.setTextSize(gameInfoTextSize);
-		springboardPaint.setTypeface(Typeface.MONOSPACE);
-		canvas.drawText(Long.toString(System.currentTimeMillis() - lastUpdate),
-		//canvas.drawText(Integer.toString(availableSpringboardCount),
+		avaiableSpringboardPaint.setAntiAlias(true);
+		avaiableSpringboardPaint.setColor(Color.WHITE);
+		avaiableSpringboardPaint.setTextSize(gameInfoTextSize);
+		avaiableSpringboardPaint.setTypeface(lifeTypeface);
+		String avaiableSpringboardText;
+		
+		if(availableSpringboardCount < 10)
+			avaiableSpringboardText = "0" + Integer.toString(availableSpringboardCount);
+		else
+			avaiableSpringboardText = Integer.toString(availableSpringboardCount);
+		
+		//canvas.drawText(Long.toString(System.currentTimeMillis() - lastUpdate),
+		canvas.drawText(avaiableSpringboardText,
 			availableSpringboardCountRectF.left + availableSpringboardCountRectF.width() / 2 , 
-			availableSpringboardCountRectF.bottom, springboardPaint);
+			availableSpringboardCountRectF.bottom, avaiableSpringboardPaint);
 		
 		lastUpdate = System.currentTimeMillis();
 	}
@@ -1909,7 +2458,7 @@ public class LifeSurfaceView extends SurfaceView
 	}
 	
 	/** 
-	 * Detect gadget in specified position, is there is,
+	 * Detect gadget in specified position, if there is,
 	 * increase its count and clear that place
 	 * @param x
 	 * @param y
@@ -1966,59 +2515,15 @@ public class LifeSurfaceView extends SurfaceView
 		/*
 		 * Draw game over animation
 		 */
-		int gameOverScreenShift = SCREEN_HEIGHT;
-		
-		Paint distancePaint = new Paint();
-		distancePaint.setAntiAlias(true);
-		distancePaint.setColor(Color.WHITE);
-		distancePaint.setTextSize(SCREEN_WIDTH / 8);
-		
-		Paint rankPaint = new Paint();
-		rankPaint.setAntiAlias(true);
-		rankPaint.setColor(Color.WHITE);
-		rankPaint.setTextSize(SCREEN_WIDTH / 16);
-		
-		Paint toolPaint = new Paint();
-		toolPaint.setAntiAlias(true);
-		toolPaint.setColor(Color.WHITE);
-		toolPaint.setTextSize(SCREEN_WIDTH / 16);
-		
-		Drawable duckyDrawable = context.getResources().getDrawable(R.drawable.ducky);
-		Drawable passportDrawable = context.getResources().getDrawable(R.drawable.passport);
-		Drawable umbrellaDrawable = context.getResources().getDrawable(R.drawable.umbrella);
 		Drawable brownDrawable = context.getResources().getDrawable(R.drawable.tile_brown);
 		Drawable yellowDrawable = context.getResources().getDrawable(R.drawable.tile_yellow);
 		Drawable cancelDrawable = context.getResources().getDrawable(R.drawable.cancel);
 		Drawable restartDrawable = context.getResources().getDrawable(R.drawable.restart);
 		
-		Bitmap duckyBitmap = ((BitmapDrawable)duckyDrawable).getBitmap();
-		Bitmap passportBitmap = ((BitmapDrawable)passportDrawable).getBitmap();
-		Bitmap umbrellaBitmap = ((BitmapDrawable)umbrellaDrawable).getBitmap();
 		Bitmap brownBitmap = ((BitmapDrawable)brownDrawable).getBitmap();
 		Bitmap yellowBitmap = ((BitmapDrawable)yellowDrawable).getBitmap();
 		Bitmap restartBitmap = ((BitmapDrawable)restartDrawable).getBitmap();
 		Bitmap cancelBitmap = ((BitmapDrawable)cancelDrawable).getBitmap();
-		
-		RectF duckyDestRect = new RectF(
-			(SCREEN_WIDTH / 6),
-			(SCREEN_HEIGHT / 2),
-			(float)(SCREEN_WIDTH / 6 + 1.5 * BRICK_WIDTH),
-			(float)(SCREEN_HEIGHT / 2  + 1.5 * BRICK_HEIGHT)
-			);
-		
-		RectF passportDestRect = new RectF(
-			(float)(SCREEN_WIDTH / 6),
-			(float)(SCREEN_HEIGHT / 2 + 2 * BRICK_HEIGHT),
-			(float)(SCREEN_WIDTH / 6 + 1.5*BRICK_WIDTH),
-			(float)(SCREEN_HEIGHT / 2  + 3.5*BRICK_HEIGHT)
-			);
-		
-		RectF umbrellaDestRect = new RectF(
-			(float)(SCREEN_WIDTH / 6),
-			(float)(SCREEN_HEIGHT / 2 + 4 * BRICK_HEIGHT),
-			(float)(SCREEN_WIDTH / 6 + 1.5*BRICK_WIDTH),
-			(float)(SCREEN_HEIGHT / 2  + 5.5*BRICK_HEIGHT)
-			);
 		
 		/*
 		 * Put this round's game info into database and get its rank
@@ -2032,50 +2537,158 @@ public class LifeSurfaceView extends SurfaceView
 		drawBrick(stageCanvas, 0, offsetMod);
 		drawHero(stageCanvas);
 
-		for(int i = 0; i < gameOverScreenShift && threadState == ThreadState.STOPPING; i+= GAME_OVER_SCREEN_SHIFT_SPPED){
+		double GAME_OVER_SCREEN_WIDTH_RATIO = 0.75;
+		//int GAME_OVER_SCREEN_HEIGHT_RATIO =
+		int gameOverScreenWidth = (int) (SCREEN_WIDTH * GAME_OVER_SCREEN_WIDTH_RATIO);
+		int gameOverScreenHeight = SCREEN_HEIGHT - (SCREEN_WIDTH - gameOverScreenWidth)/2;
+		Bitmap gameOverBitmap = Bitmap.createBitmap(gameOverScreenWidth, gameOverScreenHeight, Config.ARGB_8888);
+		Canvas gameOverCanvas = new Canvas(gameOverBitmap);
+		gameOverCanvas.drawColor(0x00000000);
+		Paint gameOverPaint = new Paint();
+		gameOverPaint.setAntiAlias(true);
+		gameOverPaint.setColor(0xe8000000);
+
+		float gameOverCanvasRadius = gameOverScreenWidth / 40;
+		gameOverCanvas.drawRoundRect(
+				new RectF(0, -gameOverCanvasRadius ,gameOverScreenWidth, gameOverScreenHeight), 
+				gameOverCanvasRadius, gameOverCanvasRadius, gameOverPaint);
+		
+		String duckyText = String.format("DUCKIES %02d", duckyCount);
+		String passportText = String.format("PASSPORTS %02d", passportCount);
+		String umbrellaText = String.format("UMBRELLAS %02d", umbrellaCount);
+
+		int gadgetTextHeight = gameOverScreenHeight * 2 / 3 * 2 /3 / 3;
+		int gadgetTextWidth = gameOverScreenWidth /2;
+		int gadgetTextOffset = gameOverScreenHeight * 2 / 3 / 6;
+		int textSize = 0;
+		Paint gadgetPaint = new Paint();
+		gadgetPaint.setTextAlign(Align.RIGHT);
+		gadgetPaint.setAntiAlias(true);
+		gadgetPaint.setColor(Color.WHITE);
+		gadgetPaint.setTypeface(lifeTypeface);
+		Rect gadgetTextBoundsRect = new Rect();
+		for(int i = 1;; i++){
+			gadgetPaint.setTextSize(i);
+			gadgetPaint.getTextBounds(umbrellaText, 0, umbrellaText.length(), gadgetTextBoundsRect);
+			
+			if( gadgetTextBoundsRect.width() > gadgetTextWidth ||
+					gadgetTextBoundsRect.height() > gadgetTextHeight){
+				textSize = i - 1;
+				gadgetPaint.setTextSize((float) (textSize*0.8));
+				break;
+			}
+		}
+		
+		/* score text */
+		int scoreTextHeight = gameOverScreenHeight / 3;
+		int scoreTextWidth = gameOverScreenWidth;
+		String scoreText = String.format("%05dM", getDistance());
+		
+		Paint scorePaint = new Paint();
+		scorePaint.setTextAlign(Align.CENTER);
+		scorePaint.setAntiAlias(true);
+		scorePaint.setTypeface(lifeTypeface);
+		scorePaint.setColor(Color.WHITE);
+		int scoreTextSize = 0;
+		for(int i = 1;;i ++){
+			scorePaint.setTextSize(i);
+			Rect scoreTextBoundsRect = new Rect();
+			scorePaint.getTextBounds(scoreText, 0, scoreText.length(), scoreTextBoundsRect);
+			
+			if( scoreTextBoundsRect.width() > scoreTextWidth ||
+				scoreTextBoundsRect.height() > scoreTextHeight){
+				scoreTextSize = i - 1;
+				scorePaint.setTextSize((float) (scoreTextSize*0.8));
+				break;
+			}
+		}
+		
+		gameOverCanvas.drawText(scoreText, scoreTextWidth / 2, scoreTextHeight, scorePaint);
+		
+		/* ducky text */
+		gameOverCanvas.drawText(duckyText, gadgetTextWidth, 
+				gadgetTextOffset + scoreTextHeight + gadgetTextHeight, gadgetPaint);
+		
+		
+		/* passport text */
+		gameOverCanvas.drawText(passportText, gadgetTextWidth, 
+				gadgetTextOffset + scoreTextHeight + gadgetTextHeight + gadgetTextHeight, gadgetPaint);
+		
+		/* umbrella text */
+		gameOverCanvas.drawText(umbrellaText, gadgetTextWidth, 
+				gadgetTextOffset + scoreTextHeight + gadgetTextHeight + gadgetTextHeight + gadgetTextHeight, gadgetPaint);
+		
+		/* rank text */
+		int rankTextHeight = gameOverScreenHeight * 2 / 3 / 3;
+		int rankTextWidth = gameOverScreenWidth / 2;
+		String rankText = String.format("RANK %02d", rank);
+		
+		Paint rankPaint = new Paint();
+		rankPaint.setTextAlign(Align.CENTER);
+		rankPaint.setTypeface(lifeTypeface);
+		rankPaint.setColor(Color.WHITE);
+		rankPaint.setAntiAlias(true);
+		Rect rankTextBoundsRect = new Rect();
+		int rankTextSize = 0;
+		for(int i = 1;; i++){
+			rankPaint.setTextSize(i);
+			rankPaint.getTextBounds(rankText, 0, rankText.length(), rankTextBoundsRect);
+			
+			if( rankTextBoundsRect.width() > rankTextWidth ||
+				rankTextBoundsRect.height() > rankTextHeight){
+				rankTextSize = i - 1;
+				rankPaint.setTextSize((float) (rankTextSize * 0.6));
+				break;
+			}
+		}
+		
+		gameOverCanvas.drawText(rankText, rankTextWidth / 2 + gameOverScreenWidth / 2, 
+				scoreTextHeight + rankTextHeight - (rankTextHeight - rankTextBoundsRect.height()) , rankPaint);
+		
+		/* restart button */
+		RectF _restartDestRect = new RectF(gameOverScreenWidth/2, scoreTextHeight + rankTextHeight,
+				gameOverScreenWidth / 2 + gameOverScreenWidth / 4, gameOverScreenHeight);
+		restartDestRect = new RectF(
+				_restartDestRect.left + _restartDestRect.width() /4 + _restartDestRect.width() / 8,
+				_restartDestRect.top + _restartDestRect.height() /4,
+				_restartDestRect.right - _restartDestRect.width() / 4 + _restartDestRect.width() / 8,
+				_restartDestRect.top + _restartDestRect.height() /4 + _restartDestRect.width() / 2);
+		gameOverCanvas.drawBitmap(yellowBitmap, null, restartDestRect, null);
+		gameOverCanvas.drawBitmap(restartBitmap, null, restartDestRect, null);
+		restartDestRect.offset((SCREEN_WIDTH - gameOverScreenWidth) / 2, 0);
+		
+		/* cancel button */
+		RectF _cancelDestRect = new RectF(gameOverScreenWidth / 2 + gameOverScreenWidth / 4, 
+				scoreTextHeight + rankTextHeight,gameOverScreenWidth, gameOverScreenHeight);
+		cancelDestRect = new RectF(
+				_cancelDestRect.left + _cancelDestRect.width() /4 - _cancelDestRect.width() / 8,
+				_cancelDestRect.top + _cancelDestRect.height() /4,
+				_cancelDestRect.right - _cancelDestRect.width() / 4 - _cancelDestRect.width() / 8,
+				_cancelDestRect.top + _cancelDestRect.height() /4 + _cancelDestRect.width() / 2);
+		gameOverCanvas.drawBitmap(brownBitmap, null, cancelDestRect, null);
+		gameOverCanvas.drawBitmap(cancelBitmap, null, cancelDestRect, null);
+		cancelDestRect.offset((SCREEN_WIDTH - gameOverScreenWidth) / 2, 0);
+		
+		
+		for(int i = 0; i <= gameOverScreenHeight && threadState == ThreadState.STOPPING; i+= GAME_OVER_SCREEN_SHIFT_SPPED){
 			Canvas canvas = holder.lockCanvas();
-			canvas.drawColor(BACK_GROUND_COLOR);
-			Rect srcRect = new Rect(0, 0, SCREEN_WIDTH , SCREEN_HEIGHT - i);
-			RectF destRect = new RectF(0, i, SCREEN_WIDTH, SCREEN_HEIGHT);
-			canvas.drawBitmap(stage, srcRect, destRect, null);
+			Rect stageSrcRect = new Rect(0, 0, SCREEN_WIDTH , SCREEN_HEIGHT);
+			RectF stageDestRect = new RectF(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+			canvas.drawBitmap(stage, stageSrcRect, stageDestRect, null);
+
+			canvas.drawBitmap(gameOverBitmap, (SCREEN_WIDTH - gameOverScreenWidth ) / 2, i - gameOverScreenHeight,null);
+		
+			holder.unlockCanvasAndPost(canvas);
+		}
+		
+		if(gameOverScreenHeight % GAME_OVER_SCREEN_SHIFT_SPPED != 0){
+			Canvas canvas = holder.lockCanvas();
+			Rect stageSrcRect = new Rect(0, 0, SCREEN_WIDTH , SCREEN_HEIGHT);
+			RectF stageDestRect = new RectF(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 			
-			canvas.drawText(
-					Integer.toString(getDistance()), 
-				SCREEN_WIDTH/6, 
-				SCREEN_HEIGHT/6 + SCREEN_WIDTH/12, 
-				distancePaint);
-			
-			canvas.drawText("Rank: " + Integer.toString(rank), SCREEN_WIDTH/6, SCREEN_HEIGHT/6 + SCREEN_WIDTH/6, rankPaint);
-			canvas.drawBitmap(duckyBitmap, null, duckyDestRect, null);
-			canvas.drawBitmap(passportBitmap, null, passportDestRect, null);
-			canvas.drawBitmap(umbrellaBitmap, null, umbrellaDestRect, null);
-			
-			canvas.drawText(
-					Integer.toString(duckyCount), 
-				(float)(SCREEN_WIDTH / 6 + 1.5*BRICK_WIDTH + 0.5*BRICK_WIDTH),
-				(float)(SCREEN_HEIGHT / 2 + SCREEN_WIDTH / 16), 
-				toolPaint
-			);
-			
-			canvas.drawText(
-					Integer.toString(passportCount),
-				(float)(SCREEN_WIDTH / 6 + 1.5*BRICK_WIDTH + 0.5*BRICK_WIDTH),
-				(float)(SCREEN_HEIGHT / 2 + 2 * BRICK_HEIGHT + SCREEN_WIDTH / 16),
-				toolPaint
-			);
-			
-			canvas.drawText(
-					Integer.toString(umbrellaCount),
-				(float)(SCREEN_WIDTH / 6 + 1.5*BRICK_WIDTH + 0.5*BRICK_WIDTH),
-				(float)(SCREEN_HEIGHT / 2 + 4 * BRICK_HEIGHT + SCREEN_WIDTH / 16),
-				toolPaint
-			);
-			
-			canvas.drawBitmap(yellowBitmap, null, restartDestRect, null);
-			canvas.drawBitmap(restartBitmap, null, restartDestRect, null);
-			canvas.drawBitmap(brownBitmap, null, cancelDestRect, null);
-			canvas.drawBitmap(cancelBitmap, null, cancelDestRect, null);
-			
+			canvas.drawBitmap(stage, stageSrcRect, stageDestRect, null);
+			canvas.drawBitmap(gameOverBitmap, (SCREEN_WIDTH - gameOverScreenWidth ) / 2, 0,null);
+		
 			holder.unlockCanvasAndPost(canvas);
 		}
 		
@@ -2088,8 +2701,6 @@ public class LifeSurfaceView extends SurfaceView
 	
 	/** Dark cloud cooling distance */
 	private int darkCloudCoolingDistance;
-	
-	//TODO add dark cloud cooling distance
 	
 	/** Generate dark cloud in brickArray */
 	private int generateDarkCloud(int start, Brick[][] array, int offset) {
@@ -2620,6 +3231,10 @@ public class LifeSurfaceView extends SurfaceView
 			context.getResources().
 				getString(R.string.game_over_screen_shift_speed));
 		
+		GAME_START_SCREEN_SHIFT_SPPED = Integer.valueOf(
+				context.getResources().
+					getString(R.string.game_start_screen_shift_speed));
+			
 		SPRINGBOARD_INCREASE_INTERVAL_MILLIS = Integer.valueOf(
 			context.getResources().
 				getString(R.string.springboard_increase_interval_millis));
@@ -2803,6 +3418,8 @@ public class LifeSurfaceView extends SurfaceView
 			(float)(SCREEN_HEIGHT / 30),
 			(float)(SCREEN_WIDTH),
 			(float)(SCREEN_HEIGHT / 30 + SCREEN_WIDTH * 1 / 8));
+		
+		lifeTypeface = Typeface.createFromAsset(context.getAssets(), "SweetAsCandy.ttf");
 		
 		/*
 		 * Set initial values
@@ -3221,12 +3838,9 @@ public class LifeSurfaceView extends SurfaceView
 	private void drawHeroShade(Canvas canvas, int startX) {
 		heroShadePaint.setAlpha(HERO_SHADE_ALPHA);
 		
-		double shadeX1 = startX + heroPositionX - (HERO_WIDTH - BRICK_WIDTH)/2 - HERO_SHADE_WIDTH_OFFSET;
-		double shadeY1 = 
-			(SCREEN_HEIGHT - heroPositionY) + 
-			BRICK_HEIGHT - HERO_HEIGHT + 
-			HERO_SHADE_HEIGHT_OFFSET + 
-			BRICK_HEIGHT_OFFSET;
+		double shadeX1 =  heroPositionX - (HERO_WIDTH - BRICK_WIDTH)/2 - HERO_SHADE_WIDTH_OFFSET;
+		double shadeY1 =  (SCREEN_HEIGHT + BRICK_HEIGHT - HERO_HEIGHT + HERO_SHADE_HEIGHT_OFFSET
+				- (heroPositionY + SUBTERRANEAN_HEIGHT + GROUND_SECTION_HEIGHT ));
 		double shadeX2 = shadeX1 + HERO_WIDTH;
 		double shadeY2 = shadeY1 + HERO_HEIGHT;
 		
@@ -3451,5 +4065,4 @@ public class LifeSurfaceView extends SurfaceView
 		RectF heroDest = new RectF(x1, y1, x2, y2);
 		canvas.drawBitmap(heroBitmap, null, heroDest, null);
 	}
-
 }
