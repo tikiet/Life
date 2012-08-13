@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,6 +33,7 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.media.MediaPlayer;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -440,6 +442,7 @@ public class LifeSurfaceView extends SurfaceView
 	Paint backGroundPaint = new Paint();
 	Canvas canvas;
 	
+	MediaPlayer mediaPlayer = new MediaPlayer();
  	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
 		}
@@ -1379,7 +1382,11 @@ public class LifeSurfaceView extends SurfaceView
 			canvas.drawBitmap(stageWithBricks, srcRect, destRect, null);
 			holder.unlockCanvasAndPost(canvas);
 		}
-		
+
+		mediaPlayer = MediaPlayer.create(context, R.raw.saving_up_for_sunday);
+		mediaPlayer.setVolume(1,1);
+		mediaPlayer.seekTo(84000);
+		mediaPlayer.start();
 		thread = new LifeSurfaceViewThread(holder, context);
 		threadState = ThreadState.RUNNING;
 		thread.start();
@@ -2511,6 +2518,27 @@ public class LifeSurfaceView extends SurfaceView
 		heroSpeedX  = 0;
 		speed = 0;
 		threadState = ThreadState.STOPPING;
+		
+		/* stop music */
+		new Thread(
+			new Runnable(){
+				@Override
+				public void run() {
+					for(int i = 10; i >= 0; i --){
+						mediaPlayer.setVolume((float)(i/10.0), (float)(i/10.0));
+						try {
+							Thread.sleep(100);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					mediaPlayer.stop();
+					mediaPlayer.release();
+					mediaPlayer = null;
+				}
+			}
+		).start();
 		
 		/*
 		 * Draw game over animation
