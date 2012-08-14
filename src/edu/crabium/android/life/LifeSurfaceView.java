@@ -33,7 +33,9 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.SoundPool;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -439,10 +441,20 @@ public class LifeSurfaceView extends SurfaceView
 	 */
 	private long lastRefreshMillis;
 	
+	private boolean gameIsPlaying;
+	
 	Paint backGroundPaint = new Paint();
 	Canvas canvas;
 	
-	MediaPlayer mediaPlayer = new MediaPlayer();
+	private int soundEffectSpringId;
+	private int soundEffectThunderId;
+	private MediaPlayer backgroundMediaPlayer = new MediaPlayer();
+	private MediaPlayer gameOverMediaPlayer = new MediaPlayer();
+	private MediaPlayer homeScreenMediaPlayer = new MediaPlayer();
+	private SoundPool soundEffect = new SoundPool(5, AudioManager.STREAM_MUSIC, 0);
+	
+	private int backgroundMusicPlayingPosition;
+	
  	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
 		}
@@ -549,6 +561,8 @@ public class LifeSurfaceView extends SurfaceView
 					if(threadState == ThreadState.PAUSED){
 						try {
 							ted.wait();
+							if(backgroundMediaPlayer != null)
+								backgroundMediaPlayer.start();
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
@@ -948,16 +962,12 @@ public class LifeSurfaceView extends SurfaceView
  				thread.start();
  			}
  		}
- 		else if( r == ThreadState.RECOVER){
- 			threadState = ThreadState.STOPPED;
- 			retrieveLifeData();
- 			threadState = ThreadState.RUNNING;
- 			thread = new LifeSurfaceViewThread(holder, context);
- 			thread.start();
- 		}
- 		else if( r == ThreadState.STOPPED){
- 			threadState = ThreadState.STOPPED;
- 			saveLifeData();
+ 		else if( r == ThreadState.RESUME){
+			threadState = ThreadState.RUNNING;
+			synchronized(ted){
+				ted.notify();
+			}
+ 			
  		}
  	}
  	
@@ -977,8 +987,6 @@ public class LifeSurfaceView extends SurfaceView
  		File groundArrayFile = new File("/data/data/edu.crabium.android.life/groundArray");
  		if(!(stageFile.exists() && arrayFile.exists() && groundArrayFile.exists()))
  			return;
- 		else
- 			isAfterPausing = true;
  		
  		/*
  		 * Restore stage's content
@@ -1077,6 +1085,19 @@ public class LifeSurfaceView extends SurfaceView
 		passportCount = settings.getInt("passportCount", passportCount);
 		availableBrickCount = settings.getInt("availableBrickCOunt", availableBrickCount);
 		availableSpringboardCount = settings.getInt("availableSpringboardCount", availableSpringboardCount);
+		
+		backgroundMusicPlayingPosition = 
+				settings.getInt("backgroundMusicPlayingPosition", backgroundMusicPlayingPosition);
+		gameIsPlaying = settings.getBoolean("gameIsPlaying", false);
+		
+		threadState = ThreadState.valueOf(settings.getString("ThreadState", "STOPPED"));
+		
+		if( (threadState == ThreadState.STOPPED) && (gameIsPlaying == true)){
+			isAfterPausing = true;
+		}
+		else
+			isAfterPausing = false;
+			
  	}
  	
  	private void saveLifeData(){
@@ -1150,6 +1171,11 @@ public class LifeSurfaceView extends SurfaceView
  			editor.putInt("passportCount",passportCount);
  			editor.putInt("availableBrickCount",availableBrickCount);
  			editor.putInt("availableSpringboardCount",availableSpringboardCount);
+ 			
+ 			editor.putInt("backgroundMusicPlayingPosition",backgroundMusicPlayingPosition);
+ 			
+ 			editor.putBoolean("gameIsPlaying", gameIsPlaying);
+ 			editor.putString("ThreadState", threadState.toString());
  			editor.commit();
  			
  			arrayOut.close();
@@ -1227,14 +1253,20 @@ public class LifeSurfaceView extends SurfaceView
 			&& event.getAction() == MotionEvent.ACTION_DOWN){
 			if(restartDestRect != null && restartDestRect.contains(event.getX(), event.getY())){
 				resetVariables();
+				initializeVariables(context);
+				initializeStage();
 				thread = new LifeSurfaceViewThread(holder, context);
 				threadState = ThreadState.RUNNING;
 				thread.start();
 				
+				stopGameOverMusic();
+				startBackgroundMusic(84000);
 				return true;
 			}
 			else if(cancelDestRect != null && cancelDestRect.contains(event.getX(), event.getY())){
 				resetVariables();
+				initializeVariables(context);
+				initializeStage();
 				displayHome();
 				
 				threadState = ThreadState.READY;
@@ -1245,6 +1277,8 @@ public class LifeSurfaceView extends SurfaceView
 		else if(event.getPointerCount() == 1 && threadState == ThreadState.RUNNING && event.getAction() == MotionEvent.ACTION_DOWN){
 			if(pauseButtonRectF.contains(event.getX(), event.getY())){
 				threadState = ThreadState.PAUSED;
+				if(backgroundMediaPlayer != null && backgroundMediaPlayer.isPlaying())
+					backgroundMediaPlayer.pause();
 			}
 		}
 		/* 
@@ -1363,9 +1397,6 @@ public class LifeSurfaceView extends SurfaceView
 		poolCoolingDistance = SCREEN_WIDTH / BRICK_WIDTH;
 		coneCoolingDistance = SCREEN_WIDTH / BRICK_WIDTH;
 		poolRemaining = 0;
-		
-		initializeVariables(context);
-		initializeStage();
 	}
 	
 	/** 
@@ -1373,6 +1404,10 @@ public class LifeSurfaceView extends SurfaceView
 	 */
 	private void onStart() {
 		threadState = ThreadState.SHIFTING;
+		gameIsPlaying = true;
+		
+		stopGameOverMusic();
+		stopHomeScreenMusic();
 		
 		for(int i = 0; i <= SCREEN_HEIGHT/2; i += GAME_START_SCREEN_SHIFT_SPPED){
 			Canvas canvas = holder.lockCanvas();
@@ -1383,10 +1418,8 @@ public class LifeSurfaceView extends SurfaceView
 			holder.unlockCanvasAndPost(canvas);
 		}
 
-		mediaPlayer = MediaPlayer.create(context, R.raw.saving_up_for_sunday);
-		mediaPlayer.setVolume(1,1);
-		mediaPlayer.seekTo(84000);
-		mediaPlayer.start();
+		startBackgroundMusic(84000);
+		
 		thread = new LifeSurfaceViewThread(holder, context);
 		threadState = ThreadState.RUNNING;
 		thread.start();
@@ -1441,45 +1474,42 @@ public class LifeSurfaceView extends SurfaceView
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
+		Log.d("Life", "surfaceChanged");
 	}
 
+	private boolean surfaceCreated;
+	
 	@Override
 	/**
 	 * Called if surface is created.
 	 * Initialize variables and stage
 	 */
 	public void surfaceCreated(SurfaceHolder holder) {
-		BRICK_WIDTH = (int) (SCREEN_WIDTH * Double.valueOf(
-			context.getResources().
-				getString(R.string.brick_width_ratio)));
-		
-		BRICK_HEIGHT = (int) (SCREEN_HEIGHT * Double.valueOf(
-			context.getResources().
-				getString(R.string.brick_height_ratio)));
-		
-		if(BRICK_HEIGHT > BRICK_WIDTH)
-			BRICK_HEIGHT = BRICK_WIDTH;
-		
-		/*
-		 * Make sure pool and cone won't shown in the first screen, or the game
-		 * will be annoying
-		 */
-		poolCoolingDistance = SCREEN_WIDTH / BRICK_WIDTH;
-		coneCoolingDistance = SCREEN_WIDTH / BRICK_WIDTH;
-		poolRemaining = 0;
-		
+		surfaceCreated = true;
+
 		initializeVariables(context);
 		initializeStage();
+		retrieveLifeData();
+		prepareBackgroundMusic(backgroundMusicPlayingPosition);
 		
-		/*
-		 * If the game is resumed from pausing, just start game immediately
-		 */
+		while(! isResumed){
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+			}
+		}
+		
 		if(isAfterPausing){
+			backgroundMediaPlayer.start();
 			thread = new LifeSurfaceViewThread(holder, context);
 			threadState = ThreadState.RUNNING;
 			thread.start();
 		}
 		else{
+			resetVariables();
+			initializeVariables(context);
+			initializeStage();
+			Log.d("Life", "resumed, display home");
 			displayHome();
 			threadState = ThreadState.READY;
 		}
@@ -1910,6 +1940,9 @@ public class LifeSurfaceView extends SurfaceView
 		halfStageToCanvas(canvas);
 		
 		drawUniformMotionText(canvas);
+		
+		stopGameOverMusic();
+		startHomeScreenMusic();
 		
 		/* draw scores button */
 		Drawable scoresDrawable = context.getResources().getDrawable(R.drawable.scores);
@@ -2413,6 +2446,10 @@ public class LifeSurfaceView extends SurfaceView
 			int jumpDistanceY = (int) ( JUMP_Y_DISTANCE_RATIO * SCREEN_HEIGHT);
 			heroSpeedY = 2 * jumpDistanceY / jumpStages;
 			jumpAccelerationY = (int) Math.ceil(heroSpeedY / jumpStages);
+			
+			soundEffect.play(soundEffectSpringId, 1, 1, 1, 0, 1);
+			Log.d("Life", "soundEffectSpringId = " + soundEffectSpringId);
+			//soundEffect.play
 		}
 		
 		// Down
@@ -2503,6 +2540,134 @@ public class LifeSurfaceView extends SurfaceView
 		else
 			return false;
 	}
+
+	private void stopGameOverMusic(){
+		if(gameOverMediaPlayer == null)
+			return;
+		
+		if(gameOverMediaPlayer.isPlaying())
+			new Thread(
+				new Runnable(){
+					@Override
+					public void run() {
+						for(int i = 10; i >= 0; i --){
+							gameOverMediaPlayer.setVolume((float)(i/10.0), (float)(i/10.0));
+							try {
+								Thread.sleep(50);
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}
+						gameOverMediaPlayer.stop();
+						gameOverMediaPlayer.release();
+						gameOverMediaPlayer = null;
+					}
+				}
+			).start();
+		else{
+			gameOverMediaPlayer.release();
+			gameOverMediaPlayer = null;
+		}
+	}
+	
+	private void stopHomeScreenMusic(){
+		if(homeScreenMediaPlayer == null)
+			return;
+		
+		if(homeScreenMediaPlayer.isPlaying())
+			new Thread(
+				new Runnable(){
+					@Override
+					public void run() {
+						for(int i = 10; i >= 0; i --){
+							homeScreenMediaPlayer.setVolume((float)(i/10.0), (float)(i/10.0));
+							try {
+								Thread.sleep(50);
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}
+						homeScreenMediaPlayer.stop();
+						homeScreenMediaPlayer.release();
+						homeScreenMediaPlayer = null;
+					}
+				}
+			).start();
+		else{
+			homeScreenMediaPlayer.release();
+			homeScreenMediaPlayer = null;
+		}
+	}
+	
+	private void prepareBackgroundMusic(int millis){
+		if(backgroundMediaPlayer != null && backgroundMediaPlayer.isPlaying())
+			return;
+		
+		backgroundMediaPlayer = MediaPlayer.create(context, R.raw.saving_up_for_sunday);
+		backgroundMediaPlayer.setVolume(1,1);
+		backgroundMediaPlayer.seekTo(millis);
+		backgroundMediaPlayer.setLooping(true);
+	}
+	
+	private void startBackgroundMusic(int millis){
+		if(backgroundMediaPlayer != null && backgroundMediaPlayer.isPlaying())
+			return;
+		
+		backgroundMediaPlayer = MediaPlayer.create(context, R.raw.saving_up_for_sunday);
+		backgroundMediaPlayer.setVolume(1,1);
+		backgroundMediaPlayer.seekTo(millis);
+		backgroundMediaPlayer.setLooping(true);
+		backgroundMediaPlayer.start();
+	}
+	
+	private void startHomeScreenMusic(){
+		if(homeScreenMediaPlayer != null && homeScreenMediaPlayer.isPlaying())
+			return;
+		
+		homeScreenMediaPlayer = MediaPlayer.create(context, R.raw.words_run_on_ice);
+		homeScreenMediaPlayer.setVolume(1,1);
+		homeScreenMediaPlayer.start();
+	}
+	
+	private void stopBackgroundMusic(){
+		if(backgroundMediaPlayer == null)
+			return;
+		
+		if(backgroundMediaPlayer.isPlaying()){
+			backgroundMusicPlayingPosition = backgroundMediaPlayer.getCurrentPosition();
+			new Thread(
+				new Runnable(){
+					@Override
+					public void run() {
+						synchronized(ted){
+							for(int i = 10; i >= 0; i --){
+								Log.d("Life", "Thread: " + thread.getId() + ", i=" + i);
+								if(backgroundMediaPlayer == null)
+									return;
+								
+								backgroundMediaPlayer.setVolume((float)(i/10.0), (float)(i/10.0));
+								try {
+									Thread.sleep(100);
+								} catch (InterruptedException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							}
+							backgroundMediaPlayer.stop();
+							backgroundMediaPlayer.release();
+							backgroundMediaPlayer = null;
+						}
+					}
+				}
+			).start();
+		}
+		else{
+			backgroundMediaPlayer.release();
+			backgroundMediaPlayer = null;
+		}
+	}
 	
 	/** Rectangle that specifies the drawing region of restart button */
 	private RectF restartDestRect;
@@ -2518,27 +2683,15 @@ public class LifeSurfaceView extends SurfaceView
 		heroSpeedX  = 0;
 		speed = 0;
 		threadState = ThreadState.STOPPING;
+		gameIsPlaying = false;
 		
 		/* stop music */
-		new Thread(
-			new Runnable(){
-				@Override
-				public void run() {
-					for(int i = 10; i >= 0; i --){
-						mediaPlayer.setVolume((float)(i/10.0), (float)(i/10.0));
-						try {
-							Thread.sleep(100);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-					}
-					mediaPlayer.stop();
-					mediaPlayer.release();
-					mediaPlayer = null;
-				}
-			}
-		).start();
+		stopBackgroundMusic();
+		
+		gameOverMediaPlayer = MediaPlayer.create
+				(context, R.raw.our_hearts_have_been_misplaced_in_a_secret_location);
+		gameOverMediaPlayer.setVolume(1, 1);
+		gameOverMediaPlayer.start();
 		
 		/*
 		 * Draw game over animation
@@ -3010,6 +3163,25 @@ public class LifeSurfaceView extends SurfaceView
 	 * @param context
 	 */
 	private void initializeVariables(Context context){
+		BRICK_WIDTH = (int) (SCREEN_WIDTH * Double.valueOf(
+			context.getResources().
+				getString(R.string.brick_width_ratio)));
+		
+		BRICK_HEIGHT = (int) (SCREEN_HEIGHT * Double.valueOf(
+			context.getResources().
+				getString(R.string.brick_height_ratio)));
+		
+		if(BRICK_HEIGHT > BRICK_WIDTH)
+			BRICK_HEIGHT = BRICK_WIDTH;
+
+		/*
+		 * Make sure pool and cone won't shown in the first screen, or the game
+		 * will be annoying
+		 */
+		poolCoolingDistance = SCREEN_WIDTH / BRICK_WIDTH;
+		coneCoolingDistance = SCREEN_WIDTH / BRICK_WIDTH;
+		poolRemaining = 0;
+		
 		heroPositionX = Integer.valueOf(context.getResources().
 			getString(R.string.hero_position_x));
 		
@@ -3449,15 +3621,17 @@ public class LifeSurfaceView extends SurfaceView
 		
 		lifeTypeface = Typeface.createFromAsset(context.getAssets(), "SweetAsCandy.ttf");
 		
+		soundEffectSpringId = soundEffect.load(context, R.raw.spring, 1);
+		soundEffectThunderId = soundEffect.load(context, R.raw.thunder, 1);
+		
 		/*
 		 * Set initial values
 		 */
+		
 		availableBrickCount = SCREEN_WIDTH / BRICK_WIDTH;
 		availableSpringboardCount = 5;
 		INITIAL_DARK_CLOUD_COOLING_DISTANCE = SCREEN_WIDTH / BRICK_WIDTH / 2;
 		threadState = ThreadState.STOPPED;
-		
-		retrieveLifeData();
 	}
 
 
@@ -3817,6 +3991,16 @@ public class LifeSurfaceView extends SurfaceView
 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
+		Log.d("Life", "surfaceDestroyed");
+		stopGameOverMusic();
+		stopHomeScreenMusic();
+		
+		stopBackgroundMusic();
+		threadState = ThreadState.STOPPED;
+		
+		saveLifeData();
+		stage = null;
+		stageWithBricks = null;
 	}
 
 	private Drawable brickShadeDrawable;
@@ -3906,11 +4090,12 @@ public class LifeSurfaceView extends SurfaceView
 	private Bitmap springboardOpened1Bitmap;
 	private Bitmap springboardOpened2Bitmap;
 
-	Paint brickPaint = new Paint();
-	Paint darkCloudShadePaint = new Paint();
-	Paint rainPaint = new Paint();
-	Paint lightningPaint = new Paint();
+	private Paint brickPaint = new Paint();
+	private Paint darkCloudShadePaint = new Paint();
+	private Paint rainPaint = new Paint();
+	private Paint lightningPaint = new Paint();
 	
+	private boolean thunderPlayed;
 	//TODO move drawables and bitmaps out of this method
 	/** 
 	 * Draw bricks on canvas
@@ -4026,6 +4211,10 @@ public class LifeSurfaceView extends SurfaceView
 						/* If it still remains some time for lightning, draw it */
 						if(lightningTimeRemainingMillis > 0){
 							lightningPaint.setAntiAlias(true);
+							if(! thunderPlayed){
+								soundEffect.play(soundEffectThunderId, 1, 1, 1, 0, 1);
+								thunderPlayed = true;
+							}
 							canvas.drawBitmap(lightningBitmap, null, new RectF(
 								(float)((i-1)*BRICK_WIDTH - offset), 
 								(float)((j+1)*BRICK_HEIGHT + BRICK_HEIGHT_OFFSET),
@@ -4042,6 +4231,7 @@ public class LifeSurfaceView extends SurfaceView
 								(LIGHTNING_DURATION_MILLIS + LIGHTNING_INTERVAL_MILLIS)){
 								lightningTimeRemainingMillis = LIGHTNING_DURATION_MILLIS;
 								lastFlashingTimeMillis = System.currentTimeMillis();
+								thunderPlayed = false;
 							}
 						}
 					}
@@ -4092,5 +4282,17 @@ public class LifeSurfaceView extends SurfaceView
 		int y2 = y1 + HERO_HEIGHT;
 		RectF heroDest = new RectF(x1, y1, x2, y2);
 		canvas.drawBitmap(heroBitmap, null, heroDest, null);
+	}
+	
+	public void onCreate(){
+	}
+	
+	public void onPause(){
+	}
+	
+	private boolean isResumed;
+	public void onResume(){
+		
+		isResumed = true;
 	}
 }

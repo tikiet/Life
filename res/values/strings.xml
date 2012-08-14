@@ -96,6 +96,6 @@
 	<string name="umbrella_effective_duration_millis">5000</string>
 	<string name="jump_y_distance_ratio">0.4</string>
 	
-	<string name="lightning_duration_millis">1000</string>
+	<string name="lightning_duration_millis">5000</string>
 	<string name="lightning_interval_millis">1000</string>
 </resources>

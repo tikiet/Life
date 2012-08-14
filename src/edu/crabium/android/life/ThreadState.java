@@ -10,6 +10,7 @@ public enum ThreadState {
 	PAUSED, 
 	RESTARTING,
 	SCORES,
-	ABOUT
+	ABOUT,
+	RESUME
 	};
 

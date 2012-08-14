@@ -18,18 +18,19 @@ public class LifeActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    	
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         this.getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         DisplayMetrics displaymetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
         
-        
         setContentView(R.layout.main);
         lifeSurfaceView = (LifeSurfaceView)findViewById(R.id.surfaceView1);
         lifeSurfaceView.setHeight(displaymetrics.heightPixels);
         lifeSurfaceView.setWidth(displaymetrics.widthPixels);
-       
+
+    	lifeSurfaceView.onCreate();
     }
     
     @Override
@@ -40,6 +41,14 @@ public class LifeActivity extends Activity {
     @Override
     public void onPause(){
     	super.onPause();
-    	lifeSurfaceView.setThreadState(ThreadState.STOPPED);
+    	lifeSurfaceView.onPause();
+    	LifeActivity.this.finish();
     }
+    
+    @Override
+    public void onResume(){
+    	super.onResume();
+    	lifeSurfaceView.onResume();
+    }
+
 }

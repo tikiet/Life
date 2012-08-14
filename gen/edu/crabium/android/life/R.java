@@ -52,7 +52,11 @@ public final class R {
         public static final int main=0x7f030000;
     }
     public static final class raw {
-        public static final int saving_up_for_sunday=0x7f040000;
+        public static final int our_hearts_have_been_misplaced_in_a_secret_location=0x7f040000;
+        public static final int saving_up_for_sunday=0x7f040001;
+        public static final int spring=0x7f040002;
+        public static final int thunder=0x7f040003;
+        public static final int words_run_on_ice=0x7f040004;
     }
     public static final class string {
         public static final int app_name=0x7f050001;
