@@ -188,6 +188,39 @@ public class LifeSurfaceView extends SurfaceView
 	private int YELLOW_BRICK_COLOR = 0xfffbe146;
 	private int BROWN_BRICK_COLOR = 0xff503e34;
 	
+	private int GAME_OVER_CANVAS_COLOR = 0xe8000000;
+	private int HOME_BUTTON_COLOR = 0xffed9301;
+	private final int SCORES_BUTTON_COLOR = 0xffed9301;
+	private final int START_BUTTON_COLOR = 0xffed9301;
+	private final int ABOUT_BUTTON_COLOR = 0xffed9301;
+	private final int BUTTON_BORDER_COLOR = 0x7fffffff;
+	
+	private final int BOARD_COLOR = 0xffed9301;
+	/*
+	 * Constants for game over screen 
+	 */
+	private double GAME_OVER_SCREEN_WIDTH_RATIO = 0.75;
+	private double GAME_OVER_CANVAS_RADIUS_RATIO = 0.025;
+	private double GAME_OVER_GADGET_TEXT_SIZE_RATIO = 0.8;
+	private double GAME_OVER_SCORE_TEXT_SIZE_RATIO = 0.8;
+	private double GAME_OVER_RANK_TEXT_SIZE_RATIO = 0.6;
+	
+	/*
+	 * Constants for scores screen 
+	 */
+	private double SCORES_BOARD_WIDTH_RATIO = 0.8;
+	private double SCORE_TEXT_SIZE_RATIO = 0.9;
+	
+	/*
+	 * Constants for board heading
+	 */
+	private double BOARD_HEADING_TEXT_SIZE_RATIO = 0.7;
+	
+	/*
+	 * Constants for about screen
+	 */
+	private double ABOUT_BOARD_TEXT_WIDTH_RATIO = 0.8;
+	
 	/*
 	 * Constants for background
 	 */
@@ -271,7 +304,7 @@ public class LifeSurfaceView extends SurfaceView
 	private double BRICK_SHADE_HEIGHT_OFFSET;
 	private double BRICK_SHADE_WIDTH_OFFSET;
 	private double BROWN_BRICK_THRESHOLD;
-	
+	private double BRICK_ROUND_RATIO = 0.2;
 	/* 
 	 * Constants for pool
 	 */
@@ -324,6 +357,7 @@ public class LifeSurfaceView extends SurfaceView
 	private int BRICK_SHADE_ALPHA = 60;
 	private int BUSH_SHADE_ALPHA = 60;
 	private int RAIN_ALPHA = 200;
+	private int DARK_CLOUD_SHADE_ALPHA = 180;
 	
 	/** Screen shift speed (vertically), used in game over animation */ 
 	private int GAME_OVER_SCREEN_SHIFT_SPPED;
@@ -332,7 +366,7 @@ public class LifeSurfaceView extends SurfaceView
 	private int GAME_START_SCREEN_SHIFT_SPPED;
 	
 	/** The maximum times to upadte screen every second */
-	private int MAXIMUM_REFRESH_RATE = 200;
+	private int MAXIMUM_REFRESH_RATE = 30;
 	
 	/** The interval between two springboard incrase, in milliseconds*/
 	private int SPRINGBOARD_INCREASE_INTERVAL_MILLIS;
@@ -342,18 +376,11 @@ public class LifeSurfaceView extends SurfaceView
 	
 	/** The array to store status for every brick in the screen */
 	private Brick[][] brickArray;
-	private enum Brick{
-		NONE, YELLOW, BROWN, PASSPORT, DUCKY, UMBRELLA,
-		DARK_CLOUD_X0Y0, DARK_CLOUD_X1Y0, DARK_CLOUD_X2Y0,
-		DARK_CLOUD_X0Y1, DARK_CLOUD_X1Y1, DARK_CLOUD_X2Y1,
-		SPRINGBOARD_CLOSED, SPRINGBOARD_OPENED_X1, SPRINGBOARD_OPENED_X2};
 	
 	/** The array to store status for every ground components */
 	private Ground[] groundArray;
-	private enum Ground{NONE, NORMAL, POOL, BUSH, TREE, CONE, 
-		NORMAL_DRAWN, POOL_DRAWN, BUSH_DRAWN, TREE_DRAWN, CONE_DRAWN}
 	
-	/*
+	/**
 	 * This array is used to support variable speed, 
 	 * it stores offsets that every update needs.
 	 * 
@@ -441,19 +468,35 @@ public class LifeSurfaceView extends SurfaceView
 	 */
 	private long lastRefreshMillis;
 	
+	/**
+	 * Used to indicate whether the game is playing during last saving
+	 */
 	private boolean gameIsPlaying;
 	
-	Paint backGroundPaint = new Paint();
-	Canvas canvas;
+	private Paint backGroundPaint = new Paint();
 	
+	/** Sound effect ID for springboard */
 	private int soundEffectSpringId;
+	
+	/** Sound effect ID for thunder */
 	private int soundEffectThunderId;
+	
+	/** A MediaPlayer used to play background music */
 	private MediaPlayer backgroundMediaPlayer = new MediaPlayer();
+
+	/** A MediaPlayer used to play game over music */
 	private MediaPlayer gameOverMediaPlayer = new MediaPlayer();
+	
+	/** A MediaPlayer used to play home screen music */
 	private MediaPlayer homeScreenMediaPlayer = new MediaPlayer();
+	
+	/** A SoundPool used to play sound effects */
 	private SoundPool soundEffect = new SoundPool(5, AudioManager.STREAM_MUSIC, 0);
 	
+	/** Record playing position when background music is stopped */
 	private int backgroundMusicPlayingPosition;
+	
+	private final int BACKGROUND_MUSIC_START_POSITION = 84000;
 	
  	private class LifeSurfaceViewThread extends Thread{
 		public LifeSurfaceViewThread(SurfaceHolder holder, Context context) {
@@ -473,6 +516,7 @@ public class LifeSurfaceView extends SurfaceView
 			
 			offsetArray[offsetArray.length-1] = heroSpeedX + BRICK_WIDTH % heroSpeedX;
 		
+			Canvas canvas = new Canvas(stageWithBricks);
 			while(threadState == ThreadState.RUNNING || threadState == ThreadState.PAUSED){
 				if((System.currentTimeMillis() - lastRefreshMillis) < (1000/MAXIMUM_REFRESH_RATE))
 					continue;
@@ -510,7 +554,6 @@ public class LifeSurfaceView extends SurfaceView
 				 * operations will be drawn in stageWithBricks
 				 * it's used to support clearing bricks
 				 */
-//				Canvas canvas = new Canvas(stageWithBricks);
 				RectF stageRectF = new RectF( 0, 0, stage.getWidth(), stage.getHeight());			
 				canvas.drawBitmap(stage, null, stageRectF, null);
 				
@@ -893,7 +936,7 @@ public class LifeSurfaceView extends SurfaceView
 		}
 	}
 
-	/*
+	/**
 	 * Time stamp for last springboard increase, in millisecond
 	 */
 	private long lastTimeIncreaseSpringboardMillis;
@@ -901,7 +944,7 @@ public class LifeSurfaceView extends SurfaceView
 	/**
 	 * update available resources
 	 */
-	public void updateResources(){
+	private void updateResources(){
 		/* 
 		 * If screen has shifted for half or a brick's width, increase
 		 * available brick by one
@@ -935,7 +978,7 @@ public class LifeSurfaceView extends SurfaceView
 	 * Draw cancel or continue button on upper right corner, based on current
 	 * game status (PAUSED or RUNNING) 
 	 */
- 	public void drawPauseButton(Canvas canvas) {
+ 	private void drawPauseButton(Canvas canvas) {
  		/*
  		 * Button's drawing area is actually smaller than that as
  		 * pauseButtonRectF declared, which means valid touching area
@@ -953,23 +996,6 @@ public class LifeSurfaceView extends SurfaceView
  		else
  			canvas.drawBitmap(pauseButtonBitmap, null, pauseRectF, null);
 	}
-
-	public void setThreadState(ThreadState r){
- 		if(r == ThreadState.RUNNING){
- 			if(getThreadState() != ThreadState.RUNNING){
- 				threadState = ThreadState.RUNNING;
- 				thread = new LifeSurfaceViewThread(holder, context);
- 				thread.start();
- 			}
- 		}
- 		else if( r == ThreadState.RESUME){
-			threadState = ThreadState.RUNNING;
-			synchronized(ted){
-				ted.notify();
-			}
- 			
- 		}
- 	}
  	
 	/** 
 	 * Used to indicate whether current game is new or is resumed from pausing.
@@ -977,6 +1003,9 @@ public class LifeSurfaceView extends SurfaceView
 	 */
  	private boolean isAfterPausing;
  	
+ 	/** 
+ 	 * Retrieve date from SharedPreferencs and other files
+ 	 */
  	private void retrieveLifeData(){
  		/* 
  		 * Check whether all of the files are present, if not all them are 
@@ -1100,6 +1129,9 @@ public class LifeSurfaceView extends SurfaceView
 			
  	}
  	
+ 	/**
+ 	 * Store date to SharedPreferences and other file
+ 	 */
  	private void saveLifeData(){
  		try {
  			/*
@@ -1201,7 +1233,6 @@ public class LifeSurfaceView extends SurfaceView
  		return thread;
  	}
  	
- 	
 	public LifeSurfaceView(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		lifeDatabase.setContext(context);
@@ -1260,7 +1291,7 @@ public class LifeSurfaceView extends SurfaceView
 				thread.start();
 				
 				stopGameOverMusic();
-				startBackgroundMusic(84000);
+				startBackgroundMusic(BACKGROUND_MUSIC_START_POSITION);
 				return true;
 			}
 			else if(cancelDestRect != null && cancelDestRect.contains(event.getX(), event.getY())){
@@ -1418,7 +1449,7 @@ public class LifeSurfaceView extends SurfaceView
 			holder.unlockCanvasAndPost(canvas);
 		}
 
-		startBackgroundMusic(84000);
+		startBackgroundMusic(BACKGROUND_MUSIC_START_POSITION);
 		
 		thread = new LifeSurfaceViewThread(holder, context);
 		threadState = ThreadState.RUNNING;
@@ -1476,8 +1507,6 @@ public class LifeSurfaceView extends SurfaceView
 			int height) {
 		Log.d("Life", "surfaceChanged");
 	}
-
-	private boolean surfaceCreated;
 	
 	@Override
 	/**
@@ -1485,8 +1514,6 @@ public class LifeSurfaceView extends SurfaceView
 	 * Initialize variables and stage
 	 */
 	public void surfaceCreated(SurfaceHolder holder) {
-		surfaceCreated = true;
-
 		initializeVariables(context);
 		initializeStage();
 		retrieveLifeData();
@@ -1550,8 +1577,8 @@ public class LifeSurfaceView extends SurfaceView
 		
 		uniformMotionTextPaint.setTextSize(SCREEN_WIDTH / 6);
 		canvas.drawText("Life", SCREEN_WIDTH/2, SCREEN_HEIGHT*2/3, uniformMotionTextPaint);
-		
 	}
+	
 	
 	/**
 	 * Display scores and dates
@@ -1588,15 +1615,15 @@ public class LifeSurfaceView extends SurfaceView
 
 		int buttonHeight = SCREEN_WIDTH * 1 / 9;
 		int buttonWidth = SCREEN_WIDTH * 1 / 9;
-		int scoresBoardWidth = (int) (SCREEN_WIDTH - (SCREEN_WIDTH / 3 - 1.2 * buttonWidth));
-		int scoresBoardHeight = (int)(SCREEN_HEIGHT - (SCREEN_HEIGHT / 3 - 1.2 * buttonHeight));
+		int scoresBoardWidth = (int) (SCREEN_WIDTH - (SCREEN_WIDTH / 3 - SCORES_BUTTON_RADIUS_RATIO * 2* buttonWidth));
+		int scoresBoardHeight = (int)(SCREEN_HEIGHT - (SCREEN_HEIGHT / 3 - SCORES_BUTTON_RADIUS_RATIO * 2 * buttonHeight));
 
 		/* Draw a board on screen, and a heading on it */
 		Bitmap scoresBoardBitmap = Bitmap.createBitmap(scoresBoardWidth, scoresBoardHeight, Config.ARGB_8888);
 		Canvas scoresBoardCanvas = new Canvas(scoresBoardBitmap);
 		drawBoard(scoresBoardCanvas, scoresBoardWidth,scoresBoardHeight);
 		
-		int scoresTextHeight = (int) (buttonHeight * 0.6);
+		int scoresTextHeight = (int) (buttonHeight * SCORES_BUTTON_RADIUS_RATIO);
 		int scoresTextWidth = scoresBoardWidth;
 		drawBoardHeading(scoresBoardCanvas, "SCORES", scoresTextWidth, scoresTextHeight);
 
@@ -1610,8 +1637,8 @@ public class LifeSurfaceView extends SurfaceView
 			cal.get(GregorianCalendar.YEAR)
 		);
 		
-		int scoreTextHeight = (int) ((scoresBoardHeight - scoresTextHeight - 1.4 * buttonWidth) / 10);
-		int scoreTextWidth = (int)(scoresBoardWidth * 0.8);
+		int scoreTextHeight = (int) ((scoresBoardHeight - scoresTextHeight - (SCORES_BUTTON_RADIUS_RATIO + 0.1) * 2 * buttonWidth) / 10);
+		int scoreTextWidth = (int)(scoresBoardWidth * SCORES_BOARD_WIDTH_RATIO);
 		
 		Paint scoreTextPaint = new Paint();
 		scoreTextPaint.setAntiAlias(true);
@@ -1627,7 +1654,7 @@ public class LifeSurfaceView extends SurfaceView
 			
 			if( scoreTextBoundsRect.width() > scoreTextWidth ||
 					scoreTextBoundsRect.height() > scoreTextHeight){
-				scoreTextPaint.setTextSize((float) ((i-1)*0.9));
+				scoreTextPaint.setTextSize((float) ((i-1) * SCORE_TEXT_SIZE_RATIO));
 				break;
 			}
 		}
@@ -1682,8 +1709,8 @@ public class LifeSurfaceView extends SurfaceView
 		 * Draw the board on the screen
 		 */
 		canvas.drawBitmap(scoresBoardBitmap, 
-				(float) (SCREEN_WIDTH / 3 - 1.2 * buttonWidth)/2, 
-				(float) ((SCREEN_HEIGHT / 3 - 1.2 * buttonHeight) /2)
+				(float) (SCREEN_WIDTH / 3 - SCORES_BUTTON_RADIUS_RATIO * 2 * buttonWidth)/2, 
+				(float) ((SCREEN_HEIGHT / 3 - SCORES_BUTTON_RADIUS_RATIO * 2 * buttonHeight) /2)
 				, null);
 		
 		drawButtons(canvas);
@@ -1692,7 +1719,6 @@ public class LifeSurfaceView extends SurfaceView
 	
 	/** Draw buttons on the main screen*/
 	private void drawButtons(Canvas canvas){
-
 		int scoresButtonHeight = SCREEN_WIDTH * 1 / 9;
 		int scoresButtonWidth = SCREEN_WIDTH * 1 / 9;
 		int aboutButtonHeight = SCREEN_WIDTH * 1 / 9;
@@ -1707,19 +1733,26 @@ public class LifeSurfaceView extends SurfaceView
 		Bitmap scoresBitmap = ((BitmapDrawable)scoresDrawable).getBitmap();
 		
 		scoresDestRect = new Rect(
-				SCREEN_WIDTH * 1 / 9,
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2, 
-				SCREEN_WIDTH * 2 / 9, 
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2 + scoresButtonHeight);
+			SCREEN_WIDTH * 1 / 9,
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2, 
+			SCREEN_WIDTH * 2 / 9, 
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2 + scoresButtonHeight);
 		Paint scoresButtonPaint = new Paint();
-		scoresButtonPaint.setColor(0xffed9301);
 		scoresButtonPaint.setAntiAlias(true);
 
-		scoresButtonPaint.setColor(0x7fffffff);
-		canvas.drawCircle(scoresDestRect.centerX(), scoresDestRect.centerY(), (float)(scoresDestRect.width() * 0.7), scoresButtonPaint);
+		scoresButtonPaint.setColor(BUTTON_BORDER_COLOR);
+		canvas.drawCircle(
+			scoresDestRect.centerX(), 
+			scoresDestRect.centerY(), 
+			(float)(scoresDestRect.width() * (SCORES_BUTTON_RADIUS_RATIO + 0.1)), 
+			scoresButtonPaint);
 		
-		scoresButtonPaint.setColor(0xffed9301);
-		canvas.drawCircle(scoresDestRect.centerX(), scoresDestRect.centerY(), (float)(scoresDestRect.width() * 0.6), scoresButtonPaint);
+		scoresButtonPaint.setColor(SCORES_BUTTON_COLOR);
+		canvas.drawCircle(
+			scoresDestRect.centerX(), 
+			scoresDestRect.centerY(), 
+			(float)(scoresDestRect.width() * SCORES_BUTTON_RADIUS_RATIO),
+			scoresButtonPaint);
 		canvas.drawBitmap(scoresBitmap, null, scoresDestRect, null);
 		
 		/* draw about button */
@@ -1727,18 +1760,26 @@ public class LifeSurfaceView extends SurfaceView
 		Bitmap aboutBitmap = ((BitmapDrawable)aboutDrawable).getBitmap();
 		
 		aboutDestRect = new Rect(
-				SCREEN_WIDTH - SCREEN_WIDTH * 2 / 9,
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2, 
-				SCREEN_WIDTH - SCREEN_WIDTH * 1 / 9, 
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2 + aboutButtonHeight);
+			SCREEN_WIDTH - SCREEN_WIDTH * 2 / 9,
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2, 
+			SCREEN_WIDTH - SCREEN_WIDTH * 1 / 9, 
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2 + aboutButtonHeight);
 		Paint aboutButtonPaint = new Paint();
 		aboutButtonPaint.setAntiAlias(true);
 		
-		aboutButtonPaint.setColor(0x7fffffff);
-		canvas.drawCircle(aboutDestRect.centerX(), aboutDestRect.centerY(), (float)(aboutDestRect.width() * 0.7), aboutButtonPaint);
+		aboutButtonPaint.setColor(BUTTON_BORDER_COLOR);
+		canvas.drawCircle(
+			aboutDestRect.centerX(), 
+			aboutDestRect.centerY(), 
+			(float)(aboutDestRect.width() * (SCORES_BUTTON_RADIUS_RATIO + 0.1)), 
+			aboutButtonPaint);
 		
-		aboutButtonPaint.setColor(0xffed9301);
-		canvas.drawCircle(aboutDestRect.centerX(), aboutDestRect.centerY(), (float)(aboutDestRect.width() * 0.6), aboutButtonPaint);
+		aboutButtonPaint.setColor(ABOUT_BUTTON_COLOR);
+		canvas.drawCircle(
+			aboutDestRect.centerX(), 
+			aboutDestRect.centerY(), 
+			(float)(aboutDestRect.width() * SCORES_BUTTON_RADIUS_RATIO), 
+			aboutButtonPaint);
 		canvas.drawBitmap(aboutBitmap, null, aboutDestRect, null);
 		
 		/* draw home button */
@@ -1746,18 +1787,26 @@ public class LifeSurfaceView extends SurfaceView
 		Bitmap homeBitmap = ((BitmapDrawable)homeDrawable).getBitmap();
 		
 		homeDestRect = new Rect(
-				SCREEN_WIDTH / 2 - homeButtonWidth / 2,
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - homeButtonHeight) / 2, 
-				SCREEN_WIDTH /2 + homeButtonWidth / 2, 
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - homeButtonHeight) / 2 + homeButtonHeight);
+			SCREEN_WIDTH / 2 - homeButtonWidth / 2,
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - homeButtonHeight) / 2, 
+			SCREEN_WIDTH /2 + homeButtonWidth / 2, 
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - homeButtonHeight) / 2 + homeButtonHeight);
 		Paint homeButtonPaint = new Paint();
 		homeButtonPaint.setAntiAlias(true);
 		
-		homeButtonPaint.setColor(0x7fffffff);
-		canvas.drawCircle(homeDestRect.centerX(), homeDestRect.centerY(), (float)(homeDestRect.width() * 0.7), homeButtonPaint);
+		homeButtonPaint.setColor(BUTTON_BORDER_COLOR);
+		canvas.drawCircle(
+			homeDestRect.centerX(), 
+			homeDestRect.centerY(), 
+			(float)(homeDestRect.width() * (SCORES_BUTTON_RADIUS_RATIO + 0.1)), 
+			homeButtonPaint);
 		
-		homeButtonPaint.setColor(0xffed9301);
-		canvas.drawCircle(homeDestRect.centerX(), homeDestRect.centerY(), (float)(homeDestRect.width() * 0.6), homeButtonPaint);
+		homeButtonPaint.setColor(HOME_BUTTON_COLOR);
+		canvas.drawCircle(
+			homeDestRect.centerX(), 
+			homeDestRect.centerY(), 
+			(float)(homeDestRect.width() * SCORES_BUTTON_RADIUS_RATIO ), 
+			homeButtonPaint);
 		canvas.drawBitmap(homeBitmap, null, homeDestRect, null);
 	}
 	
@@ -1771,11 +1820,11 @@ public class LifeSurfaceView extends SurfaceView
 		RectF boardRectF = new RectF(0,0, width, height);
 		Paint boardPaint = new Paint();
 		boardPaint.setAntiAlias(true);
-		boardPaint.setColor(0xffed9301);
+		boardPaint.setColor(BOARD_COLOR);
 		canvas.drawRoundRect(
 				boardRectF, 
-				(float)(scoresButtonWidth * 0.6), 
-				(float)(scoresButtonWidth * 0.6), 
+				(float)(scoresButtonWidth * SCORES_BUTTON_RADIUS_RATIO), 
+				(float)(scoresButtonWidth * SCORES_BUTTON_RADIUS_RATIO), 
 				boardPaint);
 	}
 	
@@ -1794,7 +1843,7 @@ public class LifeSurfaceView extends SurfaceView
 			
 			if( textBoundsRect.width() > textWidth ||
 					textBoundsRect.height() > textHeight){
-				textPaint.setTextSize((float) ((i-1)*0.7));
+				textPaint.setTextSize((float) ((i-1)*BOARD_HEADING_TEXT_SIZE_RATIO));
 				break;
 			}
 		}
@@ -1841,15 +1890,15 @@ public class LifeSurfaceView extends SurfaceView
 
 		int buttonHeight = SCREEN_WIDTH * 1 / 9;
 		int buttonWidth = SCREEN_WIDTH * 1 / 9;
-		int aboutBoardWidth = (int) (SCREEN_WIDTH - (SCREEN_WIDTH / 3 - 1.2 * buttonWidth));
-		int aboutBoardHeight = (int)(SCREEN_HEIGHT - (SCREEN_HEIGHT / 3 - 1.2 * buttonHeight));
+		int aboutBoardWidth = (int) (SCREEN_WIDTH - (SCREEN_WIDTH / 3 - ABOUT_BUTTON_RADIUS_RATIO * 2 * buttonWidth));
+		int aboutBoardHeight = (int)(SCREEN_HEIGHT - (SCREEN_HEIGHT / 3 - ABOUT_BUTTON_RADIUS_RATIO * 2 * buttonHeight));
 		
 		/* Draw a board on screen, and a heading on it */
 		Bitmap aboutBoardBitmap = Bitmap.createBitmap(aboutBoardWidth, aboutBoardHeight, Config.ARGB_8888);
 		Canvas aboutBoardCanvas = new Canvas(aboutBoardBitmap);
 		drawBoard(aboutBoardCanvas, aboutBoardWidth, aboutBoardHeight);
 		
-		int aboutHeadTextHeight = (int) (buttonHeight * 0.6);
+		int aboutHeadTextHeight = (int) (buttonHeight * ABOUT_BUTTON_RADIUS_RATIO);
 		int aboutHeadTextWidth = aboutBoardWidth;
 		drawBoardHeading(aboutBoardCanvas, "ABOUT", aboutHeadTextWidth, aboutHeadTextHeight);
 		
@@ -1881,8 +1930,8 @@ public class LifeSurfaceView extends SurfaceView
 			}
 		}
 		
-		int aboutTextHeight = (int) ((aboutBoardHeight - aboutHeadTextHeight - 1.4 * buttonWidth) / aboutText.length);
-		int aboutTextWidth = (int)(aboutBoardWidth * 0.8);
+		int aboutTextHeight = (int) ((aboutBoardHeight - aboutHeadTextHeight - (ABOUT_BUTTON_RADIUS_RATIO + 0.1) * 2 * buttonWidth) / aboutText.length);
+		int aboutTextWidth = (int)(aboutBoardWidth * ABOUT_BOARD_TEXT_WIDTH_RATIO);
 		Paint aboutTextPaint = new Paint();
 		aboutTextPaint.setAntiAlias(true);
 		aboutTextPaint.setColor(Color.WHITE);
@@ -1919,13 +1968,18 @@ public class LifeSurfaceView extends SurfaceView
 		 * Draw the board on the screen
 		 */
 		canvas.drawBitmap(aboutBoardBitmap, 
-				(float) (SCREEN_WIDTH / 3 - 1.2 * buttonWidth)/2, 
-				(float) ((SCREEN_HEIGHT / 3 - 1.2 * buttonHeight) /2)
+				(float) (SCREEN_WIDTH / 3 - ABOUT_BUTTON_RADIUS_RATIO * 2 * buttonWidth)/2, 
+				(float) ((SCREEN_HEIGHT / 3 - ABOUT_BUTTON_RADIUS_RATIO * 2 * buttonHeight) /2)
 				, null);
 		
 		drawButtons(canvas);
 		holder.unlockCanvasAndPost(canvas);
 	}
+	
+	private final double SCORES_BUTTON_RADIUS_RATIO = 0.6;
+	private final double START_BUTTON_RADIUS_RATIO = 0.6;
+	private final double ABOUT_BUTTON_RADIUS_RATIO = 0.6;
+	
 	
 	/**
 	 * Display home screen, draw 'Uniform Motion', 'Life', etc.
@@ -1951,14 +2005,18 @@ public class LifeSurfaceView extends SurfaceView
 		int  scoresButtonWidth = SCREEN_WIDTH * 1 / 9;
 		
 		scoresDestRect = new Rect(
-				SCREEN_WIDTH * 1 / 9,
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2, 
-				SCREEN_WIDTH * 2 / 9, 
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2 + scoresButtonHeight);
+			SCREEN_WIDTH * 1 / 9,
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2, 
+			SCREEN_WIDTH * 2 / 9, 
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - scoresButtonHeight) / 2 + scoresButtonHeight);
 		Paint scoresButtonPaint = new Paint();
-		scoresButtonPaint.setColor(0xffed9301);
+		scoresButtonPaint.setColor(SCORES_BUTTON_COLOR);
 		scoresButtonPaint.setAntiAlias(true);
-		canvas.drawCircle(scoresDestRect.centerX(), scoresDestRect.centerY(), (float)(scoresDestRect.width() * 0.6), scoresButtonPaint);
+		canvas.drawCircle(
+			scoresDestRect.centerX(), 
+			scoresDestRect.centerY(), 
+			(float)(scoresDestRect.width() * SCORES_BUTTON_RADIUS_RATIO), 
+			scoresButtonPaint);
 		canvas.drawBitmap(scoresBitmap, null, scoresDestRect, null);
 		
 		/* draw about button */
@@ -1968,14 +2026,18 @@ public class LifeSurfaceView extends SurfaceView
 		int  aboutButtonWidth = SCREEN_WIDTH * 1 / 9;
 		
 		aboutDestRect = new Rect(
-				SCREEN_WIDTH - SCREEN_WIDTH * 2 / 9,
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2, 
-				SCREEN_WIDTH - SCREEN_WIDTH * 1 / 9, 
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2 + aboutButtonHeight);
+			SCREEN_WIDTH - SCREEN_WIDTH * 2 / 9,
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2, 
+			SCREEN_WIDTH - SCREEN_WIDTH * 1 / 9, 
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - aboutButtonHeight) / 2 + aboutButtonHeight);
 		Paint aboutButtonPaint = new Paint();
-		aboutButtonPaint.setColor(0xffed9301);
+		aboutButtonPaint.setColor(ABOUT_BUTTON_COLOR);
 		aboutButtonPaint.setAntiAlias(true);
-		canvas.drawCircle(aboutDestRect.centerX(), aboutDestRect.centerY(), (float)(aboutDestRect.width() * 0.6), aboutButtonPaint);
+		canvas.drawCircle(
+			aboutDestRect.centerX(), 
+			aboutDestRect.centerY(), 
+			(float)(aboutDestRect.width() * ABOUT_BUTTON_RADIUS_RATIO), 
+			aboutButtonPaint);
 		canvas.drawBitmap(aboutBitmap, null, aboutDestRect, null);
 		
 		/* draw start button */
@@ -1985,14 +2047,18 @@ public class LifeSurfaceView extends SurfaceView
 		int  startButtonWidth = SCREEN_WIDTH * 1 / 9;
 		
 		startDestRect = new Rect(
-				SCREEN_WIDTH / 2 - startButtonWidth / 2,
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - startButtonHeight) / 2, 
-				SCREEN_WIDTH /2 + startButtonWidth / 2, 
-				SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - startButtonHeight) / 2 + startButtonHeight);
+			SCREEN_WIDTH / 2 - startButtonWidth / 2,
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - startButtonHeight) / 2, 
+			SCREEN_WIDTH /2 + startButtonWidth / 2, 
+			SCREEN_HEIGHT * 2 / 3 + (SCREEN_HEIGHT * 1 / 3 - startButtonHeight) / 2 + startButtonHeight);
 		Paint startButtonPaint = new Paint();
-		startButtonPaint.setColor(0xffed9301);
+		startButtonPaint.setColor(START_BUTTON_COLOR);
 		startButtonPaint.setAntiAlias(true);
-		canvas.drawCircle(startDestRect.centerX(), startDestRect.centerY(), (float)(startDestRect.width() * 0.6), startButtonPaint);
+		canvas.drawCircle(
+			startDestRect.centerX(),
+			startDestRect.centerY(), 
+			(float)(startDestRect.width() * START_BUTTON_RADIUS_RATIO), 
+			startButtonPaint);
 		canvas.drawBitmap(startBitmap, null, startDestRect, null);
 		
 		holder.unlockCanvasAndPost(canvas);
@@ -2086,7 +2152,7 @@ public class LifeSurfaceView extends SurfaceView
 	private double startUsingDuckyTimeMillis;
 	
 
-	Paint duckPaint = new Paint();
+	private Paint duckPaint = new Paint();
 	
 	/**
 	 * Draw a countdown for ducky 
@@ -2160,7 +2226,7 @@ public class LifeSurfaceView extends SurfaceView
 	 */
 	private double startUsingPassportTime;
 
-	Paint passportPaint = new Paint();
+	private Paint passportPaint = new Paint();
 
 	/**
 	 * Draw a countdown for passport
@@ -2213,12 +2279,12 @@ public class LifeSurfaceView extends SurfaceView
 	 */
 	private int gameInfoTextSize;
 
-	Paint distancePaint = new Paint();
-	Paint duckyPaint = new Paint();
-	Paint umbrellaCountPaint = new Paint();
-	Paint passportCountPaint = new Paint();
-	Paint avaiableSpringboardPaint = new Paint();
-	Paint availableBrickPaint = new Paint();
+	private Paint distancePaint = new Paint();
+	private Paint duckyPaint = new Paint();
+	private Paint umbrellaCountPaint = new Paint();
+	private Paint passportCountPaint = new Paint();
+	private Paint avaiableSpringboardPaint = new Paint();
+	private Paint availableBrickPaint = new Paint();
 	
 	/**
 	 * Display available resources
@@ -2449,7 +2515,6 @@ public class LifeSurfaceView extends SurfaceView
 			
 			soundEffect.play(soundEffectSpringId, 1, 1, 1, 0, 1);
 			Log.d("Life", "soundEffectSpringId = " + soundEffectSpringId);
-			//soundEffect.play
 		}
 		
 		// Down
@@ -2469,7 +2534,6 @@ public class LifeSurfaceView extends SurfaceView
 		else if ( (heroPositionBrickY > 1) && (brickArray[heroPositionBrickX+1][heroPositionBrickY] != Brick.NONE) && 
 				( ( brickArray[heroPositionBrickX+1][heroPositionBrickY-1] != Brick.YELLOW) &&
 				( brickArray[heroPositionBrickX+1][heroPositionBrickY-1] != Brick.BROWN) )){
-			
 			heroPositionY += BRICK_HEIGHT;
 			lastHeroPositionBrickX = heroPositionBrickX;
 			lastHeroPositionBrickY = heroPositionBrickY;
@@ -2555,7 +2619,6 @@ public class LifeSurfaceView extends SurfaceView
 							try {
 								Thread.sleep(50);
 							} catch (InterruptedException e) {
-								// TODO Auto-generated catch block
 								e.printStackTrace();
 							}
 						}
@@ -2585,7 +2648,6 @@ public class LifeSurfaceView extends SurfaceView
 							try {
 								Thread.sleep(50);
 							} catch (InterruptedException e) {
-								// TODO Auto-generated catch block
 								e.printStackTrace();
 							}
 						}
@@ -2601,6 +2663,10 @@ public class LifeSurfaceView extends SurfaceView
 		}
 	}
 	
+	/**
+	 * Prepare background music, set start point as milllis' value
+	 * @param millis
+	 */
 	private void prepareBackgroundMusic(int millis){
 		if(backgroundMediaPlayer != null && backgroundMediaPlayer.isPlaying())
 			return;
@@ -2611,6 +2677,10 @@ public class LifeSurfaceView extends SurfaceView
 		backgroundMediaPlayer.setLooping(true);
 	}
 	
+	/**
+	 * Start background music, start from millis 
+	 * @param millis
+	 */
 	private void startBackgroundMusic(int millis){
 		if(backgroundMediaPlayer != null && backgroundMediaPlayer.isPlaying())
 			return;
@@ -2622,6 +2692,9 @@ public class LifeSurfaceView extends SurfaceView
 		backgroundMediaPlayer.start();
 	}
 	
+	/**
+	 * Start home screen music
+	 */
 	private void startHomeScreenMusic(){
 		if(homeScreenMediaPlayer != null && homeScreenMediaPlayer.isPlaying())
 			return;
@@ -2643,7 +2716,6 @@ public class LifeSurfaceView extends SurfaceView
 					public void run() {
 						synchronized(ted){
 							for(int i = 10; i >= 0; i --){
-								Log.d("Life", "Thread: " + thread.getId() + ", i=" + i);
 								if(backgroundMediaPlayer == null)
 									return;
 								
@@ -2651,7 +2723,6 @@ public class LifeSurfaceView extends SurfaceView
 								try {
 									Thread.sleep(100);
 								} catch (InterruptedException e) {
-									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
 							}
@@ -2718,18 +2789,18 @@ public class LifeSurfaceView extends SurfaceView
 		drawBrick(stageCanvas, 0, offsetMod);
 		drawHero(stageCanvas);
 
-		double GAME_OVER_SCREEN_WIDTH_RATIO = 0.75;
-		//int GAME_OVER_SCREEN_HEIGHT_RATIO =
 		int gameOverScreenWidth = (int) (SCREEN_WIDTH * GAME_OVER_SCREEN_WIDTH_RATIO);
-		int gameOverScreenHeight = SCREEN_HEIGHT - (SCREEN_WIDTH - gameOverScreenWidth)/2;
+		int gameOverScreenHeight = SCREEN_HEIGHT - (SCREEN_WIDTH - gameOverScreenWidth) / 2;
 		Bitmap gameOverBitmap = Bitmap.createBitmap(gameOverScreenWidth, gameOverScreenHeight, Config.ARGB_8888);
 		Canvas gameOverCanvas = new Canvas(gameOverBitmap);
-		gameOverCanvas.drawColor(0x00000000);
+		gameOverCanvas.drawColor(Color.TRANSPARENT);
 		Paint gameOverPaint = new Paint();
 		gameOverPaint.setAntiAlias(true);
-		gameOverPaint.setColor(0xe8000000);
+		gameOverPaint.setColor(GAME_OVER_CANVAS_COLOR);
 
-		float gameOverCanvasRadius = gameOverScreenWidth / 40;
+		float gameOverCanvasRadius = 
+				(float) (gameOverScreenWidth * GAME_OVER_CANVAS_RADIUS_RATIO);
+		
 		gameOverCanvas.drawRoundRect(
 				new RectF(0, -gameOverCanvasRadius ,gameOverScreenWidth, gameOverScreenHeight), 
 				gameOverCanvasRadius, gameOverCanvasRadius, gameOverPaint);
@@ -2738,8 +2809,8 @@ public class LifeSurfaceView extends SurfaceView
 		String passportText = String.format("PASSPORTS %02d", passportCount);
 		String umbrellaText = String.format("UMBRELLAS %02d", umbrellaCount);
 
-		int gadgetTextHeight = gameOverScreenHeight * 2 / 3 * 2 /3 / 3;
-		int gadgetTextWidth = gameOverScreenWidth /2;
+		int gadgetTextHeight = gameOverScreenHeight * 2 / 3 * 2 / 3 / 3;
+		int gadgetTextWidth = gameOverScreenWidth / 2;
 		int gadgetTextOffset = gameOverScreenHeight * 2 / 3 / 6;
 		int textSize = 0;
 		Paint gadgetPaint = new Paint();
@@ -2755,7 +2826,7 @@ public class LifeSurfaceView extends SurfaceView
 			if( gadgetTextBoundsRect.width() > gadgetTextWidth ||
 					gadgetTextBoundsRect.height() > gadgetTextHeight){
 				textSize = i - 1;
-				gadgetPaint.setTextSize((float) (textSize*0.8));
+				gadgetPaint.setTextSize((float) (textSize * GAME_OVER_GADGET_TEXT_SIZE_RATIO));
 				break;
 			}
 		}
@@ -2779,7 +2850,7 @@ public class LifeSurfaceView extends SurfaceView
 			if( scoreTextBoundsRect.width() > scoreTextWidth ||
 				scoreTextBoundsRect.height() > scoreTextHeight){
 				scoreTextSize = i - 1;
-				scorePaint.setTextSize((float) (scoreTextSize*0.8));
+				scorePaint.setTextSize((float) (scoreTextSize * GAME_OVER_SCORE_TEXT_SIZE_RATIO));
 				break;
 			}
 		}
@@ -2818,7 +2889,7 @@ public class LifeSurfaceView extends SurfaceView
 			if( rankTextBoundsRect.width() > rankTextWidth ||
 				rankTextBoundsRect.height() > rankTextHeight){
 				rankTextSize = i - 1;
-				rankPaint.setTextSize((float) (rankTextSize * 0.6));
+				rankPaint.setTextSize((float) (rankTextSize * GAME_OVER_RANK_TEXT_SIZE_RATIO));
 				break;
 			}
 		}
@@ -2827,29 +2898,38 @@ public class LifeSurfaceView extends SurfaceView
 				scoreTextHeight + rankTextHeight - (rankTextHeight - rankTextBoundsRect.height()) , rankPaint);
 		
 		/* restart button */
-		RectF _restartDestRect = new RectF(gameOverScreenWidth/2, scoreTextHeight + rankTextHeight,
-				gameOverScreenWidth / 2 + gameOverScreenWidth / 4, gameOverScreenHeight);
+		RectF _restartDestRect = new RectF(
+				gameOverScreenWidth/2, 
+				scoreTextHeight + rankTextHeight,
+				gameOverScreenWidth / 2 + gameOverScreenWidth / 4, 
+				gameOverScreenHeight);
+		
 		restartDestRect = new RectF(
 				_restartDestRect.left + _restartDestRect.width() /4 + _restartDestRect.width() / 8,
 				_restartDestRect.top + _restartDestRect.height() /4,
 				_restartDestRect.right - _restartDestRect.width() / 4 + _restartDestRect.width() / 8,
 				_restartDestRect.top + _restartDestRect.height() /4 + _restartDestRect.width() / 2);
+		
 		gameOverCanvas.drawBitmap(yellowBitmap, null, restartDestRect, null);
 		gameOverCanvas.drawBitmap(restartBitmap, null, restartDestRect, null);
 		restartDestRect.offset((SCREEN_WIDTH - gameOverScreenWidth) / 2, 0);
 		
 		/* cancel button */
-		RectF _cancelDestRect = new RectF(gameOverScreenWidth / 2 + gameOverScreenWidth / 4, 
-				scoreTextHeight + rankTextHeight,gameOverScreenWidth, gameOverScreenHeight);
+		RectF _cancelDestRect = new RectF(
+				gameOverScreenWidth / 2 + gameOverScreenWidth / 4, 
+				scoreTextHeight + rankTextHeight,
+				gameOverScreenWidth, 
+				gameOverScreenHeight);
+		
 		cancelDestRect = new RectF(
 				_cancelDestRect.left + _cancelDestRect.width() /4 - _cancelDestRect.width() / 8,
 				_cancelDestRect.top + _cancelDestRect.height() /4,
 				_cancelDestRect.right - _cancelDestRect.width() / 4 - _cancelDestRect.width() / 8,
 				_cancelDestRect.top + _cancelDestRect.height() /4 + _cancelDestRect.width() / 2);
+		
 		gameOverCanvas.drawBitmap(brownBitmap, null, cancelDestRect, null);
 		gameOverCanvas.drawBitmap(cancelBitmap, null, cancelDestRect, null);
 		cancelDestRect.offset((SCREEN_WIDTH - gameOverScreenWidth) / 2, 0);
-		
 		
 		for(int i = 0; i <= gameOverScreenHeight && threadState == ThreadState.STOPPING; i+= GAME_OVER_SCREEN_SHIFT_SPPED){
 			Canvas canvas = holder.lockCanvas();
@@ -2930,7 +3010,7 @@ public class LifeSurfaceView extends SurfaceView
 	private Bitmap cloud1Bitmap;
 	private Bitmap cloud1ShadeBitmap;
 	
-	Paint shadePaint = new Paint();
+	private Paint shadePaint = new Paint();
 	
 	/**
 	 * Draw clouds and their shade on canvas
@@ -3025,8 +3105,8 @@ public class LifeSurfaceView extends SurfaceView
 		return result;
 	}
 
-	Paint backPillarShadePaint = new Paint();
-	Paint backPillarPaint = new Paint();
+	private Paint backPillarShadePaint = new Paint();
+	private Paint backPillarPaint = new Paint();
 	
 	/**
 	 * Draw back pillars and their shades
@@ -3627,7 +3707,6 @@ public class LifeSurfaceView extends SurfaceView
 		/*
 		 * Set initial values
 		 */
-		
 		availableBrickCount = SCREEN_WIDTH / BRICK_WIDTH;
 		availableSpringboardCount = 5;
 		INITIAL_DARK_CLOUD_COOLING_DISTANCE = SCREEN_WIDTH / BRICK_WIDTH / 2;
@@ -3638,11 +3717,11 @@ public class LifeSurfaceView extends SurfaceView
 	private Drawable bushDrawable;
 	private Bitmap bushBitmap;
 
-	Paint mBushPaint = new Paint();
-	Paint rBushPaint = new Paint();
-	Paint lBushPaint = new Paint();
+	private Paint mBushPaint = new Paint();
+	private Paint rBushPaint = new Paint();
+	private Paint lBushPaint = new Paint();
 	
-	Paint bushShadePaint = new Paint();
+	private Paint bushShadePaint = new Paint();
 	
 	/**
 	 * Draw bush on canvas
@@ -3750,11 +3829,11 @@ public class LifeSurfaceView extends SurfaceView
 	private Drawable treeCrownDrawable;
 	private Bitmap treeCrownBitmap;
 
-	Paint trunkPaint = new Paint();
-	Paint trunkShadePaint = new Paint();
+	private Paint trunkPaint = new Paint();
+	private Paint trunkShadePaint = new Paint();
 
-	Paint treeCrownShadePaint = new Paint();
-	Paint treeCrownPaint = new Paint();
+	private Paint treeCrownShadePaint = new Paint();
+	private Paint treeCrownPaint = new Paint();
 	
 	/**
 	 * Draw tree on canvas
@@ -3831,7 +3910,7 @@ public class LifeSurfaceView extends SurfaceView
 		canvas.drawBitmap(treeCrownBitmap, null, treeCrownRectF, treeCrownPaint);
 	}
 
-	Paint grassPaint = new Paint();
+	private Paint grassPaint = new Paint();
 	
 	/**
 	 * Draw grass on canvas
@@ -3864,10 +3943,10 @@ public class LifeSurfaceView extends SurfaceView
 		return end;
 	}
 
-	Paint subterraneanPaint = new Paint();
-	Paint groundSectionPaint = new Paint();
-	Paint groundPaint = new Paint();
-	Paint groundBorderPaint = new Paint();
+	private Paint subterraneanPaint = new Paint();
+	private Paint groundSectionPaint = new Paint();
+	private Paint groundPaint = new Paint();
+	private Paint groundBorderPaint = new Paint();
 	
 	/**
 	 * Draw tree, bush, etc on the ground, and draw the ground
@@ -3878,7 +3957,6 @@ public class LifeSurfaceView extends SurfaceView
 	 */
 	private void drawGround(Canvas canvas, int groundEnd, int offset){
 		int groundArrayEnd = (int) ((groundEnd + offset) / BRICK_WIDTH);
-		
 		
 		int i = 0;
 		while(i < groundArray.length && 
@@ -3891,10 +3969,10 @@ public class LifeSurfaceView extends SurfaceView
 			/*
 			 * Set paint's color, based on ground block's status
 			 */
-			if(groundArray[i] == Ground.NORMAL 
-			|| groundArray[i] == Ground.TREE
-			|| groundArray[i] == Ground.BUSH
-			|| groundArray[i] == Ground.CONE ){
+			if( groundArray[i] == Ground.NORMAL || 
+				groundArray[i] == Ground.TREE	|| 
+				groundArray[i] == Ground.BUSH	|| 
+				groundArray[i] == Ground.CONE ){
 				subterraneanPaint.setColor(SUBTERRANEAN_COLOR);
 				groundSectionPaint.setColor(GROUND_SECTION_COLOR);
 				groundBorderPaint.setColor(GROUND_BORDER_COLOR);
@@ -4006,7 +4084,7 @@ public class LifeSurfaceView extends SurfaceView
 	private Drawable brickShadeDrawable;
 	private Bitmap brickShadeBitmap;
 
-	Paint brickShadePaint = new Paint();
+	private Paint brickShadePaint = new Paint();
 	
 	/** 
 	 * Draw bricks' shades on canvas
@@ -4031,7 +4109,11 @@ public class LifeSurfaceView extends SurfaceView
 					if(y2 > SCREEN_HEIGHT) y2 = SCREEN_HEIGHT;
 					
 					RectF destRect = new RectF(x1,y1,x2,y2);
-					canvas.drawRoundRect(destRect, 5, 5, brickShadePaint);
+					canvas.drawRoundRect(
+							destRect, 
+							(float)(BRICK_WIDTH * BRICK_ROUND_RATIO), 
+							(float)(BRICK_WIDTH * BRICK_ROUND_RATIO), 
+							brickShadePaint);
 					//canvas.drawBitmap(brickShadeBitmap, null, destRect, brickShadePaint);
 				}
 			}
@@ -4041,7 +4123,7 @@ public class LifeSurfaceView extends SurfaceView
 	private Drawable heroShadeDrawable;
 	private Bitmap heroShadeBitmap;
 
-	Paint heroShadePaint = new Paint();
+	private Paint heroShadePaint = new Paint();
 	/**
 	 * Draw hero's shade on canvas
 	 * @param canvas
@@ -4096,15 +4178,13 @@ public class LifeSurfaceView extends SurfaceView
 	private Paint lightningPaint = new Paint();
 	
 	private boolean thunderPlayed;
-	//TODO move drawables and bitmaps out of this method
+	
 	/** 
 	 * Draw bricks on canvas
 	 * @param start
 	 * @param offset
 	 */
-	private void drawBrick(Canvas canvas, int start, int offset) {		
-		//Canvas canvas = new Canvas(stageWithBricks);
-		
+	private void drawBrick(Canvas canvas, int start, int offset) {	
 		for(int i = (int)Math.floor(start / BRICK_WIDTH); 
 			i < (int)Math.ceil((start + SCREEN_WIDTH)/ BRICK_WIDTH + 2); i++){
 			for(int j = 0; j < brickArray[i].length; j++){
@@ -4123,13 +4203,19 @@ public class LifeSurfaceView extends SurfaceView
 					
 					if(brickArray[i][j] == Brick.BROWN ){
 						brickPaint.setColor(BROWN_BRICK_COLOR);
-						canvas.drawRoundRect(destRect, 5, 5, brickPaint);
-						//canvas.drawBitmap(brownBrickBitmap, null, destRect,	null);
+						canvas.drawRoundRect(
+							destRect, 
+							(float)(BRICK_WIDTH * BRICK_ROUND_RATIO), 
+							(float)(BRICK_WIDTH * BRICK_ROUND_RATIO), 
+							brickPaint);
 					}
 					else if(brickArray[i][j] == Brick.YELLOW){
 						brickPaint.setColor(YELLOW_BRICK_COLOR);
-						canvas.drawRoundRect(destRect, 5, 5, brickPaint);
-						//canvas.drawBitmap(yellowBrickBitmap, null, destRect, null);
+						canvas.drawRoundRect(
+							destRect, 
+							(float)(BRICK_WIDTH * BRICK_ROUND_RATIO), 
+							(float)(BRICK_WIDTH * BRICK_ROUND_RATIO), 
+							brickPaint);
 					}
 					else if(brickArray[i][j] == Brick.SPRINGBOARD_CLOSED)
 						canvas.drawBitmap(springboardClosedBitmap, null, destRect, null);
@@ -4197,12 +4283,12 @@ public class LifeSurfaceView extends SurfaceView
 					canvas.drawBitmap(darkCloudBitmap, srcRect, destRect, null);
 					
 					if(drawShade){
-						darkCloudShadePaint.setAlpha(180);
+						darkCloudShadePaint.setAlpha(DARK_CLOUD_SHADE_ALPHA);
 						RectF shadeDest = new RectF(
-								(float)((i-2)*BRICK_WIDTH - offset), 
-								(float)((j+1)*BRICK_HEIGHT + BRICK_HEIGHT_OFFSET),
-								(float)((i+1)*BRICK_WIDTH - offset), 
-								(float)((j+4)*BRICK_HEIGHT + BRICK_HEIGHT_OFFSET));
+							(float)((i-2)*BRICK_WIDTH - offset), 
+							(float)((j+1)*BRICK_HEIGHT + BRICK_HEIGHT_OFFSET),
+							(float)((i+1)*BRICK_WIDTH - offset), 
+							(float)((j+4)*BRICK_HEIGHT + BRICK_HEIGHT_OFFSET));
 						//canvas.drawBitmap(darkCloudShadeBitmap, null, shadeDest, darkCloudShadePaint );
 						
 						rainPaint.setAlpha(RAIN_ALPHA);
@@ -4292,7 +4378,6 @@ public class LifeSurfaceView extends SurfaceView
 	
 	private boolean isResumed;
 	public void onResume(){
-		
 		isResumed = true;
 	}
 }
